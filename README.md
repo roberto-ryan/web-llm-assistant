@@ -6,9 +6,19 @@
 
 </div>
 
-Chat with AI assistant running locally in your browser powered by WebGPU. This project is currently under development and supports document editing assistance on Overleaf. More features are planned.
+**WebLLM Assistant** brings the power of AI agent directly to your browser! Powered by WebGPU, WebLLM Assistant runs completely inside your browser and ensures 100% data privacy while providing seamless AI assistance as you browse the internet.
 
-![demo](https://github.com/mlc-ai/mlc-assistant/assets/11940172/51f0668d-860e-4014-b104-4d2e0e7b334e)
+## 🚀 Features
+
+- **Private AI Chat**: Engage with an AI about the webpage you're currently viewing without any data leaving your browser.
+- **Google Calendar Integration**: View and create events on your Google Calendar directly through the assistant.
+- **Overleaf Document Editing**: Modify your Overleaf documents with ease, all within your browser.
+
+## ⚠️ Early Development Stage
+
+Please note that WebLLM Assistant is in the early stages of development. While we're excited to share our progress, you may encounter bugs or incomplete features. We're actively working to improve and expand the assistant's capabilities.
+
+Experience AI like never before—fast, secure, and completely private.
 
 ## Getting Started
 
