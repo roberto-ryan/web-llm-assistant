@@ -82,7 +82,7 @@ const sendMessageToContentScript = async (message: Object) => {
 
 let currentAnimation: string | null = null;
 let pendingAnimationTick = -Infinity;
-let pendingAnimationInterval: number | null = null;
+let pendingAnimationInterval: NodeJS.Timeout | null = null;
 
 const startPendingAnimation = (status: string) => {
   if (currentAnimation === status) {
