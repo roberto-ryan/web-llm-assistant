@@ -408,9 +408,7 @@ function addFunctionCallDialog(response) {
     functionDiv.appendChild(createElement(LoaderCircle));
     try {
       const response = await callToolFunction(functionCall);
-      if (typeof response === "object" && response["htmlLink"]) {
-        await chrome.tabs.create({ url: response["htmlLink"] });
-      } else if (
+      if (
         response &&
         ((typeof response === "string" && response.length > 0) ||
           typeof response === "object")
