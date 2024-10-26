@@ -4,6 +4,8 @@
 <a href="https://github.com/mlc-ai/web-llm"><img alt="Related Repository: WebLLM" src="https://img.shields.io/badge/Related_Repo-WebLLM-fafbfc?logo=github"></a>
 <a href="https://discord.gg/9Xpy2HGBuD"><img alt="Join Discord" src="https://img.shields.io/badge/Join-Discord-7289DA?logo=discord&logoColor=white"></a>
 
+[WebLLM Assistant Demo](https://github.com/user-attachments/assets/97642edd-cf55-4797-903f-a1e2bfeb6982)
+
 </div>
 
 **WebLLM Assistant** brings the power of AI agent directly to your browser! Powered by WebGPU, WebLLM Assistant runs completely inside your browser and ensures 100% data privacy while providing seamless AI assistance as you browse the internet.
