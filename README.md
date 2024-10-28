@@ -1,5 +1,5 @@
 <div align="center">
-<img alt="image" src="./docs/webllm-assistant.png" style="margin-bottom: 20px;" />
+<img alt="image" src="./docs/logo_WebLLMAssistant.png" style="margin-bottom: 20px;" />
 
 <a href="https://github.com/mlc-ai/web-llm"><img alt="Related Repository: WebLLM" src="https://img.shields.io/badge/Related_Repo-WebLLM-fafbfc?logo=github"></a>
 <a href="https://discord.gg/9Xpy2HGBuD"><img alt="Join Discord" src="https://img.shields.io/badge/Join-Discord-7289DA?logo=discord&logoColor=white"></a>
