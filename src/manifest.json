@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "WebLLM Assistant",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "AI assistant within your browser.",
   "icons": {
     "16": "icons/icon-16.png",
@@ -13,16 +13,17 @@
     "extension_pages": "style-src-elem 'self' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; script-src 'self' 'wasm-unsafe-eval'; default-src 'self' data:; connect-src 'self' data: http://localhost:8000 https://huggingface.co https://cdn-lfs.huggingface.co https://cdn-lfs-us-1.huggingface.co https://raw.githubusercontent.com https://cdn-lfs-us-1.hf.co/ https://www.googleapis.com/"
   },
   "action": {
-    "default_popup": "src/popup.html"
+    "default_popup": "popup.html"
   },
   "background": {
-    "service_worker": "src/background.ts",
+    "service_worker": "background.ts",
     "type": "module"
   },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["src/content.ts"],
+      "js": ["content.ts"],
+      "css": ["content.css"],
       "run_at": "document_end"
     }
   ],
@@ -32,13 +33,23 @@
         "icons/icon-16.png",
         "icons/icon-32.png",
         "icons/icon-64.png",
-        "icons/icon-128.png"
+        "icons/icon-128.png",
+        "icons/icon-gray-16.png",
+        "icons/icon-gray-32.png",
+        "icons/icon-gray-64.png",
+        "icons/icon-gray-128.png",
+        "icons/wand-64.png",
+        "icons/thumbs-up-lined.png",
+        "icons/thumbs-up-filled.png",
+        "icons/thumbs-down-lined.png",
+        "icons/thumbs-down-filled.png",
+        "icons/redo.png"
       ],
       "matches": ["<all_urls>"]
     }
   ],
   "options_ui": {
-    "page": "src/options.html",
+    "page": "options.html",
     "open_in_tab": false
   },
   "permissions": ["storage", "tabs", "activeTab", "identity"],

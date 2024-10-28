@@ -1,0 +1,52 @@
+.modalWrapper {
+  width: 240px;
+  border-radius: 10px;
+  background-color: rgba(75, 83, 99, 0.9);
+  overflow: hidden;
+}
+
+#MlcAssistantModelWrapper .modal {
+  height: 40px;
+  display: flex;
+  align-content: flex-start;
+  align-items: center;
+}
+
+#MlcAssistantModelWrapper .modal {
+  overflow: hidden;
+}
+
+#MlcAssistantModelWrapper .modalInput {
+  background: transparent;
+  border: none;
+  width: 100%;
+  height: 32px;
+  padding-left: 10px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 13px;
+  overflow: hidden;
+}
+
+#MlcAssistantModelWrapper .modalInput::placeholder {
+  color: white;
+  opacity: 0.3;
+  font-size: 13px;
+}
+
+#MlcAssistantModelWrapper textarea:focus,
+#MlcAssistantModelWrapper input:focus {
+  outline: none;
+}
+
+#MlcAssistantModelWrapper .answer {
+  font-size: 13px;
+  color: white;
+  overflow: hidden;
+}
+
+#MlcAssistantModelWrapper .question {
+  font-size: 13px;
+  font-weight: 900;
+  color: white;
+  overflow: hidden;
+}
