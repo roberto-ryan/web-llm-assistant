@@ -20,8 +20,6 @@
 
 Please note that WebLLM Assistant is in the early stages of development. While we're excited to share our progress, you may encounter bugs or incomplete features. We're actively working to improve and expand the assistant's capabilities.
 
-Experience AI like never before—fast, secure, and completely private.
-
 ## Getting Started
 
 ### 1. Install Dependencies
