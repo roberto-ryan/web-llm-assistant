@@ -70,7 +70,9 @@ const getCurrentActiveTabUrl: () => Promise<string | undefined> = async () =>
     });
   });
 
-const sendMessageToContentScript = async (message: Object) => {
+const sendMessageToContentScript = async (
+  message: Object,
+): Promise<string | Object> => {
   const [tab] = await chrome.tabs.query({
     currentWindow: true,
     active: true,
@@ -78,6 +80,7 @@ const sendMessageToContentScript = async (message: Object) => {
   if (tab.id) {
     return chrome.tabs.sendMessage(tab.id, message);
   }
+  throw new Error("Error: no active tab found");
 };
 
 let currentAnimation: string | null = null;
@@ -115,23 +118,26 @@ const stopPendingAnimation = () => {
 const callToolFunction = async (functionCall: {
   name: ToolName;
   arguments?: Object;
-}) => {
+}): Promise<string> => {
   const { name: function_name, arguments: parameters = {} } = functionCall;
   const caller = tool[function_name].caller;
   console.log("Call tool", function_name, parameters);
-  if (caller === CallerType.ContentScript) {
-    try {
-      return await sendMessageToContentScript({
+  let observation;
+  try {
+    if (caller === CallerType.ContentScript) {
+      observation = await sendMessageToContentScript({
         action: "function_call",
         function_name,
         parameters,
       });
-    } catch (e) {
-      console.error(e);
-      return { error: e.message };
+    } else {
+      observation = tool[function_name].implementation(state, parameters);
     }
+    return typeof observation === "string" ? observation : JSON.stringify(observation);
+  } catch (e) {
+    console.error(e);
+    return JSON.stringify({ error: e.message });
   }
-  return tool[function_name].implementation(state, parameters);
 };
 
 let scope = Scope.Any;
