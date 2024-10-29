@@ -165,9 +165,9 @@ async function loadWebllmEngine() {
   const options = await chrome.storage.sync.get({
     temperature: 0.5,
     contextLength: 4096,
+    model: "Hermes-3-Llama-3.1-8B-q4f16_1-MLC",
   });
-  const selectedModel = "Hermes-3-Llama-3.1-8B-q4f32_1-MLC";
-  await engine.reload(selectedModel, {
+  await engine.reload(options["model"], {
     context_window_size: options["contextLength"],
     temperature: options["temperature"],
   });
