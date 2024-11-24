@@ -11,4 +11,8 @@ chrome.runtime.onConnect.addListener(function (port) {
   port.onMessage.addListener(webllmHandler.onmessage.bind(webllmHandler));
 });
 
+chrome.sidePanel
+  .setPanelBehavior({ openPanelOnActionClick: true })
+  .catch((error) => console.error(error));
+
 console.log("Event listener registered");

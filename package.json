@@ -12,6 +12,7 @@
   "devDependencies": {
     "@parcel/config-webextension": "^2.9.3",
     "@types/chrome": "^0.0.242",
+    "@types/node": "^22.9.3",
     "assert": "^2.1.0",
     "browserify-zlib": "^0.2.0",
     "buffer": "^6.0.3",
@@ -31,8 +32,8 @@
     "util": "^0.12.5"
   },
   "dependencies": {
-    "@mlc-ai/web-agent-interface": "^0.0.2",
-    "@mlc-ai/web-llm": "^0.2.73",
+    "@mlc-ai/web-agent-interface": "file:../web-agent-interface/lib",
+    "@mlc-ai/web-llm": "^0.2.76",
     "lucide": "^0.453.0",
     "showdown": "^2.1.0"
   }

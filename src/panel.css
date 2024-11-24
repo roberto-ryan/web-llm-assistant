@@ -14,8 +14,20 @@ body {
   padding: 0;
 }
 body {
-  min-width: 480px;
+  padding: 1rem;
+  height: 100dvh;
   background-color: rgba(75, 83, 99, 0.9);
+  align-items: center;
+  display: flex;
+  position: relative;
+  flex-direction: column;
+}
+body > * {
+  flex: none;
+}
+p, div, h1, h2, h3, h4, h5, h6 {
+  padding: 0;
+  margin: 0;
 }
 a {
   color: #9e9eff;
@@ -35,34 +47,106 @@ button {
 }
 button svg {
   stroke: rgba(75, 83, 99, 0.8);
+  color: #414141;
 }
 button:not(:disabled) {
   cursor: pointer;
 }
-button:hover,
+button:hover:not(:disabled),
 button:disabled {
   background-color: rgba(75, 83, 99, 0.4);
+  color: #d7d7d7;
 }
 button:hover:not(:disabled) svg,
 button:disabled svg {
   stroke: white;
 }
-.modal {
-  align-items: center;
+#messages {
+  width: 100%;
+  background-color: #2d3748; /* Dark gray for the chat container */
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
   display: flex;
-  position: relative;
   flex-direction: column;
-}
-#input-container {
+  overflow: hidden;
+  margin: 1rem 0;
+  flex: 1;
+  padding: 0 15px;
+  overflow-y: auto;
   display: flex;
+  flex-direction: column;
   gap: 10px;
-  height: 40px;
-  margin: 10px 0;
-  width: calc(100% - 20px);
-  position: relative;
+  margin-top: 1rem;
+}
+.message {
+  border-radius: 8px;
+  max-width: 95%;
+  word-wrap: break-word;
+  margin-top: 1rem;
+}
+.message p {
+  margin: 0;
+}
+.message.user {
+  background-color: #4a5568;
+  color: #ffffff;
+  align-self: flex-end;
+  padding: 1rem;
+}
+.message.assistant {
+  background-color: #1a202c;
+  color: #e2e8f0;
+  align-self: flex-start;
+  padding-top: 0;
+  padding-bottom: 1rem;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+.action, .scratchpad, .message .text {
+  margin-top: 1rem;
+}
+.scratchpad h3 {
+  margin: 0;
+  font-size: 1.1em;
+  color: #d0d0d0;
+}
+.scratchpad-header {
+  display: flex;
   align-items: center;
-  transition: all 0.5s;
-  transition-behavior: allow-discrete;
+}
+.scratchpad-content {
+  margin-top: .8rem;
+  color: #e2e8f0;
+}
+.scratchpad-content.hidden {
+  display: none;
+}
+.action {
+  margin-top: .8rem;
+  text-align: center;
+  background: #293346;
+  padding: 1rem;
+  border-radius: .5rem;
+}
+.modalTextarea {
+  width: 100%;
+  padding: .5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  display: grid;
+  white-space: normal;
+  resize: none;
+  overflow: hidden;
+  box-sizing: border-box;
+  margin-bottom: 1rem;
+  min-width: calc(1rem + 20px);
+  height: 3rem;
+}
+.modalTextarea:focus {
+  outline: none;
+}
+.modalTextarea:invalid {
+  box-shadow: none;
 }
 .icon-container {
   width: 32px;
@@ -76,24 +160,13 @@ button:disabled svg {
   height: 20px;
   width: 20px;
 }
-.input {
-  flex-grow: 1;
-  height: 32px;
-  display: flex;
-  align-items: center;
-}
-.modalInput {
-  width: 100%;
-  padding: 5px;
-}
 .actions {
-  height: 20px;
+  height: 1.25rem;
   display: flex;
   flex-direction: row-reverse;
-  margin-top: 5px;
+  margin-top: .25rem;
 }
 .action-button {
-  font-size: 10px;
   background-color: transparent;
   margin-right: 0.8rem;
   color: rgba(255, 255, 255, 0.8);
@@ -107,7 +180,6 @@ button:disabled svg {
   padding-left: 1rem;
   padding-right: 1rem;
   color: white;
-  font-size: 1rem;
   word-break: break-word;
   overflow-wrap: break-word;
 }
@@ -118,30 +190,37 @@ button:disabled svg {
 .hidden {
   display: none !important;
 }
-#input-container button {
-  width: 2rem;
+#button-container {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-end;
+  gap: 1rem;
+}
+#button-container button {
   height: 2rem;
   border-radius: 0.25rem;
   display: flex;
+  gap: 4px;
   align-items: center;
   justify-content: center;
 }
-#input-container button:not(:disabled) {
+#button-container button:not(:disabled) {
   cursor: pointer;
 }
 #init-container {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  padding: 0 20px;
   flex-direction: column;
   position: relative;
   width: 80%;
   color: white;
+  margin-top: 1rem;
 }
 #init-container p {
-  font-size: 0.8rem;
   margin-bottom: 0;
+  text-align: center;
 }
 #logo {
   margin-top: 20px;

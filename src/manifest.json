@@ -12,8 +12,8 @@
   "content_security_policy": {
     "extension_pages": "style-src-elem 'self' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; script-src 'self' 'wasm-unsafe-eval'; default-src 'self' data:; connect-src 'self' data: http://localhost:8000 https://huggingface.co https://cdn-lfs.huggingface.co https://cdn-lfs-us-1.huggingface.co https://raw.githubusercontent.com https://cdn-lfs-us-1.hf.co/ https://www.googleapis.com/"
   },
-  "action": {
-    "default_popup": "popup.html"
+  "side_panel": {
+    "default_path": "panel.html"
   },
   "background": {
     "service_worker": "background.ts",
@@ -52,7 +52,19 @@
     "page": "options.html",
     "open_in_tab": false
   },
-  "permissions": ["storage", "tabs", "activeTab", "identity"],
+  "action": {
+    "default_title": "Click to open panel"
+  },
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+W", 
+        "mac": "Command+Shift+W"
+      },
+      "description": "Open plugin panel"
+    }
+  },
+  "permissions": ["storage", "tabs", "activeTab", "identity", "sidePanel"],
   "oauth2": {
     "client_id": "330480786365-tmrf3u2pnssqp24iuol0bljp34qd1i9l.apps.googleusercontent.com",
     "scopes": ["https://www.googleapis.com/auth/calendar"]

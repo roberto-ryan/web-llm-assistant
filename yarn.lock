@@ -138,15 +138,13 @@
     "@lezer/lr" "^1.0.0"
     json5 "^2.2.1"
 
-"@mlc-ai/web-agent-interface@^0.0.2":
-  version "0.0.2"
-  resolved "https://registry.yarnpkg.com/@mlc-ai/web-agent-interface/-/web-agent-interface-0.0.2.tgz#d9eb1b63886453b8795e012819af8fb84d71ec56"
-  integrity sha512-o7z+eMQTlRchFct+MhidUVVUMkkJOSaD+LBZL2PkHFFRfGMTEDh7kckgMoJxTYKcvD6k7If0Hqama2zexxx1DA==
+"@mlc-ai/web-agent-interface@file:../web-agent-interface/lib":
+  version "0.0.0"
 
-"@mlc-ai/web-llm@^0.2.73":
-  version "0.2.73"
-  resolved "https://registry.npmjs.org/@mlc-ai/web-llm/-/web-llm-0.2.73.tgz"
-  integrity sha512-v9eS05aptZYNBhRZ7KEq5dr1kMESHvkdwru9tNY1oS1GDDEBjUt4Y/u06ejvP3qF4VatCakEezzJT3SkuMhDnQ==
+"@mlc-ai/web-llm@^0.2.76":
+  version "0.2.76"
+  resolved "https://registry.yarnpkg.com/@mlc-ai/web-llm/-/web-llm-0.2.76.tgz#e90c9bb246144686adaf90fa0c73aa65718544e9"
+  integrity sha512-iUQXiGSCjfaiG8UDE2ZlH61DTGABXKTduiZecIMAXP9XV4LzFEeNRL+76QXstaYkBLvJvgfmKzO/ImJgdJe9zw==
   dependencies:
     loglevel "^1.9.1"
 
@@ -1017,6 +1015,13 @@
   version "1.2.15"
   resolved "https://registry.npmjs.org/@types/har-format/-/har-format-1.2.15.tgz"
   integrity sha512-RpQH4rXLuvTXKR0zqHq3go0RVXYv/YVqv4TnPH95VbwUxZdQlK1EtcMvQvMpDngHbt13Csh9Z4qT9AbkiQH5BA==
+
+"@types/node@^22.9.3":
+  version "22.9.3"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-22.9.3.tgz#08f3d64b3bc6d74b162d36f60213e8a6704ef2b4"
+  integrity sha512-F3u1fs/fce3FFk+DAxbxc78DF8x0cY09RRL8GnXLmkJ1jvx3TtPdWoTT5/NiYfI5ASqXBmfqJi9dZ3gxMx4lzw==
+  dependencies:
+    undici-types "~6.19.8"
 
 abortcontroller-polyfill@^1.1.9:
   version "1.7.5"
@@ -2757,6 +2762,11 @@ type-fest@^0.20.2:
   version "0.20.2"
   resolved "https://registry.npmjs.org/type-fest/-/type-fest-0.20.2.tgz"
   integrity sha512-Ne+eE4r0/iWnpAxD852z3A+N0Bt5RN//NjJwRd2VFHEmrywxf5vsZlh4R6lixl6B+wz/8d+maTSAkN1FIkI3LQ==
+
+undici-types@~6.19.8:
+  version "6.19.8"
+  resolved "https://registry.yarnpkg.com/undici-types/-/undici-types-6.19.8.tgz#35111c9d1437ab83a7cdc0abae2f26d88eda0a02"
+  integrity sha512-ve2KP6f/JnbPBFyobGHuerC9g1FYGn/F8n1LWTwNxCEzd6IfqTwUQcNXgEtmmQ6DlRrC1hrSrBnCZPokRrDHjw==
 
 update-browserslist-db@^1.0.13:
   version "1.0.13"
