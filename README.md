@@ -4,7 +4,7 @@
 <a href="https://github.com/mlc-ai/web-llm"><img alt="Related Repository: WebLLM" src="https://img.shields.io/badge/Related_Repo-WebLLM-fafbfc?logo=github"></a>
 <a href="https://discord.gg/9Xpy2HGBuD"><img alt="Join Discord" src="https://img.shields.io/badge/Join-Discord-7289DA?logo=discord&logoColor=white"></a>
 
-[WebLLM Assistant Demo](https://github.com/user-attachments/assets/97642edd-cf55-4797-903f-a1e2bfeb6982)
+<img width="442" alt="WebLLM Assistant Demo" src="https://github.com/user-attachments/assets/0765f798-bff1-4132-8734-ba705f975542">
 
 </div>
 
