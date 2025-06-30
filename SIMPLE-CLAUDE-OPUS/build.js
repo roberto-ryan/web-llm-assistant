@@ -1,4 +1,4 @@
-// Simple build script
+// Build script with proper WebLLM bundling
 const fs = require('fs');
 const path = require('path');
 const { build } = require('esbuild');
@@ -28,21 +28,47 @@ staticFiles.forEach(file => {
 });
 
 // Build JavaScript files
-const entryPoints = [
-  'src/background.js',
-  'src/content.js',
-  'src/panel.js',
-  'src/options.js'
-];
-
 console.log('\nBuilding JavaScript...');
-build({
-  entryPoints,
+
+// Common build options
+const commonOptions = {
   bundle: true,
-  outdir: 'dist',
   format: 'esm',
   // watch: process.argv.includes('--watch'),
-  logLevel: 'info'
-}).then(() => {
+  logLevel: 'info',
+  platform: 'browser',
+  target: ['chrome89'],
+  loader: {
+    '.wasm': 'file'
+  }
+};
+
+// Build each file
+Promise.all([
+  // Background script - keep as ES module
+  build({
+    ...commonOptions,
+    entryPoints: ['src/background.js'],
+    outfile: 'dist/background.js',
+    // Bundle WebLLM for background
+  }),
+  
+  // Panel script - bundle everything
+  build({
+    ...commonOptions,
+    entryPoints: ['src/panel.js'],
+    outfile: 'dist/panel.js',
+  }),
+  
+  // Content and options scripts
+  build({
+    ...commonOptions,
+    entryPoints: ['src/content.js', 'src/options.js'],
+    outdir: 'dist',
+  })
+]).then(() => {
   console.log('\n✅ Build complete! Load the dist/ folder in Chrome.');
-}).catch(() => process.exit(1));
+}).catch((err) => {
+  console.error('Build failed:', err);
+  process.exit(1);
+});

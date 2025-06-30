@@ -1,5 +1,6 @@
-// Ultra-lightweight panel script
+// Panel script with external API primary, WebLLM fallback
 import showdown from "showdown";
+import { ExtensionServiceWorkerMLCEngine } from "@mlc-ai/web-llm";
 
 const messagesDiv = document.getElementById("messages");
 const inputEl = document.getElementById("input");
@@ -12,24 +13,69 @@ const markdownConverter = new showdown.Converter({
 });
 
 let messages = [];
+let useExternalAPI = true;
 let apiEndpoint = "";
 let apiKey = "";
+let webllmEngine = null;
+let webllmModel = "";
 
 // Load settings
 async function loadSettings() {
   const settings = await chrome.storage.sync.get({
+    useExternalAPI: true,
     apiEndpoint: "http://localhost:1234/v1/chat/completions",
-    apiKey: ""
+    apiKey: "",
+    webllmModel: "Llama-3.2-1B-Instruct-q4f16_1-MLC"
   });
   
+  useExternalAPI = settings.useExternalAPI;
   apiEndpoint = settings.apiEndpoint;
   apiKey = settings.apiKey;
+  webllmModel = settings.webllmModel;
   
-  if (apiEndpoint) {
-    statusEl.textContent = "Ready";
+  if (useExternalAPI && apiEndpoint) {
+    statusEl.textContent = "Connected to external API";
     enableInput();
+    // Preload WebLLM in background for fallback
+    setTimeout(() => initWebLLM(webllmModel, true), 5000);
   } else {
-    statusEl.textContent = "Configure API in settings";
+    statusEl.textContent = "Loading WebLLM...";
+    await initWebLLM(webllmModel, false);
+  }
+}
+
+// Initialize WebLLM
+async function initWebLLM(model, isBackground = false) {
+  try {
+    if (!isBackground) {
+      statusEl.textContent = "Initializing WebLLM...";
+    }
+    
+    webllmEngine = new ExtensionServiceWorkerMLCEngine();
+    const port = chrome.runtime.connect({ name: "webllm" });
+    
+    await webllmEngine.reload(model, {
+      context_window_size: 4096,
+      temperature: 0.7,
+      initProgressCallback: (progress) => {
+        if (!isBackground) {
+          statusEl.textContent = `Loading model: ${Math.round(progress.progress * 100)}%`;
+        }
+      }
+    });
+    
+    if (!isBackground) {
+      statusEl.textContent = "WebLLM ready";
+      enableInput();
+    }
+  } catch (error) {
+    console.error("WebLLM initialization failed:", error);
+    if (!isBackground) {
+      statusEl.textContent = "WebLLM failed - using external API";
+      if (apiEndpoint) {
+        enableInput();
+      }
+    }
   }
 }
 
@@ -66,8 +112,8 @@ async function getPageContext() {
   return null;
 }
 
-// Call API
-async function callAPI(messages) {
+// Call external API
+async function callExternalAPI(messages) {
   const response = await fetch(apiEndpoint, {
     method: "POST",
     headers: {
@@ -88,10 +134,25 @@ async function callAPI(messages) {
   return data.choices[0].message.content;
 }
 
+// Call WebLLM
+async function callWebLLM(messages) {
+  if (!webllmEngine) {
+    throw new Error("WebLLM not initialized");
+  }
+  
+  const completion = await webllmEngine.chat.completions.create({
+    messages: messages,
+    temperature: 0.7,
+    max_tokens: 1000
+  });
+  
+  return completion.choices[0].message.content;
+}
+
 // Handle message sending
 async function handleSend() {
   const query = inputEl.value.trim();
-  if (!query || !apiEndpoint) return;
+  if (!query) return;
   
   inputEl.value = "";
   sendBtn.disabled = true;
@@ -117,13 +178,34 @@ Provide helpful, concise responses.`
   try {
     statusEl.textContent = "Thinking...";
     
-    const response = await callAPI(apiMessages);
+    let response;
+    let usedFallback = false;
+    
+    if (useExternalAPI && apiEndpoint) {
+      try {
+        response = await callExternalAPI(apiMessages);
+      } catch (error) {
+        console.error("External API failed:", error);
+        
+        // Try WebLLM fallback
+        if (!webllmEngine) {
+          statusEl.textContent = "Loading WebLLM fallback...";
+          await initWebLLM(webllmModel, false);
+        }
+        
+        response = await callWebLLM(apiMessages);
+        usedFallback = true;
+      }
+    } else {
+      // Use WebLLM directly
+      response = await callWebLLM(apiMessages);
+    }
     
     messages.push({ role: "user", content: query });
     messages.push({ role: "assistant", content: response });
     
     addMessage(response, "assistant");
-    statusEl.textContent = "Ready";
+    statusEl.textContent = usedFallback ? "WebLLM (fallback)" : (useExternalAPI ? "External API" : "WebLLM");
     
   } catch (error) {
     console.error("Error:", error);

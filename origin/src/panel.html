@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Assistant Extension</title>
+    <link rel="stylesheet" href="panel.css" />
+  </head>
+  <body>
+    <img id="logo" src="./icons/icon-128.png" alt="WebLLM Assistant Logo" />
+    <div id="init-container">
+      <p id="loading-warn">Note: The very first load can take a long time!</p>
+      <div class="progress-container" id="progress-bar-container">
+        <div class="progress-bar" id="progress-bar"></div>
+      </div>
+      <p id="intro" class="hidden">Hi, what can I do for you?</p>
+    </div>
+    <div id="messages" class="hidden"></div>
+    <textarea
+      placeholder="Create an abstraction..."
+      class="modalTextarea hidden"
+      id="modalTextarea"
+    ></textarea>
+    <div id="button-container" class="hidden">
+      <button id="send" disabled>Send</button>
+      <button class="hidden button" id="regenerate" disabled>
+        <i data-lucide="rotate-cw"></i>
+        Regenerate
+      </button>
+    </div>
+    <script src="panel.ts" type="module"></script>
+  </body>
+</html>

@@ -1,24 +1,39 @@
-// Simplified options script
+// Options page script
+const useExternalAPIEl = document.getElementById("useExternalAPI");
+const apiSettingsEl = document.getElementById("apiSettings");
 const apiEndpointEl = document.getElementById("apiEndpoint");
 const apiKeyEl = document.getElementById("apiKey");
+const webllmModelEl = document.getElementById("webllmModel");
 const saveBtn = document.getElementById("save");
 const testBtn = document.getElementById("test");
 const statusEl = document.getElementById("status");
 
+// Toggle API settings visibility
+useExternalAPIEl.addEventListener("change", () => {
+  apiSettingsEl.style.display = useExternalAPIEl.checked ? "block" : "none";
+});
+
 // Load saved settings
 chrome.storage.sync.get({
+  useExternalAPI: true,
   apiEndpoint: "http://localhost:1234/v1/chat/completions",
-  apiKey: ""
+  apiKey: "",
+  webllmModel: "Llama-3.2-1B-Instruct-q4f16_1-MLC"
 }, (settings) => {
+  useExternalAPIEl.checked = settings.useExternalAPI;
   apiEndpointEl.value = settings.apiEndpoint;
   apiKeyEl.value = settings.apiKey;
+  webllmModelEl.value = settings.webllmModel;
+  apiSettingsEl.style.display = settings.useExternalAPI ? "block" : "none";
 });
 
 // Save settings
 saveBtn.addEventListener("click", () => {
   const settings = {
+    useExternalAPI: useExternalAPIEl.checked,
     apiEndpoint: apiEndpointEl.value,
-    apiKey: apiKeyEl.value
+    apiKey: apiKeyEl.value,
+    webllmModel: webllmModelEl.value
   };
   
   chrome.storage.sync.set(settings, () => {
@@ -26,8 +41,13 @@ saveBtn.addEventListener("click", () => {
   });
 });
 
-// Test connection
+// Test API connection
 testBtn.addEventListener("click", async () => {
+  if (!useExternalAPIEl.checked) {
+    showStatus("External API is disabled. WebLLM will be used instead.", "error");
+    return;
+  }
+  
   const endpoint = apiEndpointEl.value;
   const apiKey = apiKeyEl.value;
   

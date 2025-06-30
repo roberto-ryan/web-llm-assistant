@@ -1,12 +1,13 @@
 {
   "name": "lightweight-ai-assistant",
   "version": "0.1.0",
-  "description": "Ultra-lightweight AI browser assistant",
+  "description": "Ultra-lightweight AI browser assistant with WebLLM fallback",
   "scripts": {
     "build": "node build.js",
     "watch": "node build.js --watch"
   },
   "dependencies": {
+    "@mlc-ai/web-llm": "^0.2.35",
     "showdown": "^2.1.0"
   },
   "devDependencies": {
