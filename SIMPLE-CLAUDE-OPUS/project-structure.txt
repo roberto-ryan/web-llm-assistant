@@ -1,0 +1,21 @@
+lightweight-ai-assistant/
+├── src/
+│   ├── manifest.json
+│   ├── background.js
+│   ├── content.js
+│   ├── panel.html
+│   ├── panel.js
+│   ├── options.html
+│   ├── options.js
+│   └── icon.png (128x128 icon)
+├── package.json
+├── README.md
+└── dist/ (generated after build)
+    ├── manifest.json
+    ├── background.js
+    ├── content.js
+    ├── panel.html
+    ├── panel.js (bundled with dependencies)
+    ├── options.html
+    ├── options.js
+    └── icon.png
