@@ -21,7 +21,9 @@ staticFiles.forEach(file => {
   const dest = path.join('dist', file);
   if (fs.existsSync(src)) {
     fs.copyFileSync(src, dest);
-    console.log(`Copied ${file}`);
+    console.log(`✓ Copied ${file}`);
+  } else if (file === 'icon.png') {
+    console.log(`⚠ Warning: ${file} not found - extension will use default icon`);
   }
 });
 
@@ -33,12 +35,14 @@ const entryPoints = [
   'src/options.js'
 ];
 
+console.log('\nBuilding JavaScript...');
 build({
   entryPoints,
   bundle: true,
   outdir: 'dist',
   format: 'esm',
-  external: ['@mlc-ai/web-llm'], // WebLLM loads dynamically
   // watch: process.argv.includes('--watch'),
   logLevel: 'info'
+}).then(() => {
+  console.log('\n✅ Build complete! Load the dist/ folder in Chrome.');
 }).catch(() => process.exit(1));

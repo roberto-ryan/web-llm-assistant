@@ -7,7 +7,6 @@
     "watch": "node build.js --watch"
   },
   "dependencies": {
-    "@mlc-ai/web-llm": "^0.2.35",
     "showdown": "^2.1.0"
   },
   "devDependencies": {

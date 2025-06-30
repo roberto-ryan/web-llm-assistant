@@ -1,8 +1,0 @@
-Note: You'll need to add an icon.png file (128x128 pixels) in the src/ directory.
-
-You can:
-1. Use any 128x128 PNG image
-2. Create a simple one with an online tool
-3. Use this as a placeholder: Download any AI/robot icon and resize it to 128x128
-
-The extension will work without it, but Chrome will show a default icon.

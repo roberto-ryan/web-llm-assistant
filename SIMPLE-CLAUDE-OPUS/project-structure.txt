@@ -1,21 +1,17 @@
 lightweight-ai-assistant/
 ├── src/
-│   ├── manifest.json
-│   ├── background.js
-│   ├── content.js
-│   ├── panel.html
-│   ├── panel.js
-│   ├── options.html
-│   ├── options.js
-│   └── icon.png (128x128 icon)
-├── package.json
-├── README.md
-└── dist/ (generated after build)
-    ├── manifest.json
-    ├── background.js
-    ├── content.js
-    ├── panel.html
-    ├── panel.js (bundled with dependencies)
-    ├── options.html
-    ├── options.js
-    └── icon.png
+│   ├── manifest.json     # Extension config
+│   ├── background.js     # Service worker (minimal)
+│   ├── content.js        # Page context grabber
+│   ├── panel.html        # Chat UI
+│   ├── panel.js          # Chat logic
+│   ├── options.html      # Settings UI
+│   ├── options.js        # Settings logic
+│   └── icon.png          # 128x128 icon
+├── package.json          # Dependencies
+├── build.js              # Build script
+├── README.md             # Documentation
+└── dist/                 # Built extension (generated)
+    └── (all files bundled and ready)
+
+Total size: ~50KB (vs original 5MB+)

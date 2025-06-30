@@ -1,4 +1,4 @@
-import { ExtensionServiceWorkerMLCEngine } from "@mlc-ai/web-llm";
+// Ultra-lightweight panel script
 import showdown from "showdown";
 
 const messagesDiv = document.getElementById("messages");
@@ -12,50 +12,24 @@ const markdownConverter = new showdown.Converter({
 });
 
 let messages = [];
-let useExternalAPI = false;
 let apiEndpoint = "";
 let apiKey = "";
-let webllmEngine = null;
 
 // Load settings
 async function loadSettings() {
   const settings = await chrome.storage.sync.get({
-    useExternalAPI: true,
     apiEndpoint: "http://localhost:1234/v1/chat/completions",
-    apiKey: "",
-    webllmModel: "Llama-3.2-1B-Instruct-q4f16_1-MLC"
+    apiKey: ""
   });
   
-  useExternalAPI = settings.useExternalAPI;
   apiEndpoint = settings.apiEndpoint;
   apiKey = settings.apiKey;
   
-  if (useExternalAPI && apiEndpoint) {
-    statusEl.textContent = "Connected to external API";
+  if (apiEndpoint) {
+    statusEl.textContent = "Ready";
     enableInput();
   } else {
-    statusEl.textContent = "Loading WebLLM fallback...";
-    await loadWebLLM(settings.webllmModel);
-  }
-}
-
-// Load WebLLM as fallback
-async function loadWebLLM(model) {
-  try {
-    webllmEngine = new ExtensionServiceWorkerMLCEngine();
-    
-    // Connect to the service worker
-    const port = chrome.runtime.connect({ name: "webllm" });
-    
-    await webllmEngine.reload(model, {
-      context_window_size: 4096,
-      temperature: 0.7
-    });
-    statusEl.textContent = "WebLLM ready";
-    enableInput();
-  } catch (error) {
-    statusEl.textContent = "Failed to load AI model";
-    console.error("WebLLM load error:", error);
+    statusEl.textContent = "Configure API in settings";
   }
 }
 
@@ -92,8 +66,8 @@ async function getPageContext() {
   return null;
 }
 
-// Call external API
-async function callExternalAPI(messages) {
+// Call API
+async function callAPI(messages) {
   const response = await fetch(apiEndpoint, {
     method: "POST",
     headers: {
@@ -114,20 +88,10 @@ async function callExternalAPI(messages) {
   return data.choices[0].message.content;
 }
 
-// Call WebLLM
-async function callWebLLM(messages) {
-  const completion = await webllmEngine.chat.completions.create({
-    messages: messages,
-    temperature: 0.7,
-    stream: false
-  });
-  return completion.choices[0].message.content;
-}
-
 // Handle message sending
 async function handleSend() {
   const query = inputEl.value.trim();
-  if (!query) return;
+  if (!query || !apiEndpoint) return;
   
   inputEl.value = "";
   sendBtn.disabled = true;
@@ -153,27 +117,13 @@ Provide helpful, concise responses.`
   try {
     statusEl.textContent = "Thinking...";
     
-    let response;
-    if (useExternalAPI && apiEndpoint) {
-      try {
-        response = await callExternalAPI(apiMessages);
-      } catch (error) {
-        console.error("External API failed, falling back to WebLLM:", error);
-        if (!webllmEngine) {
-          statusEl.textContent = "Loading WebLLM fallback...";
-          await loadWebLLM("Llama-3.2-1B-Instruct-q4f16_1-MLC");
-        }
-        response = await callWebLLM(apiMessages);
-      }
-    } else {
-      response = await callWebLLM(apiMessages);
-    }
+    const response = await callAPI(apiMessages);
     
     messages.push({ role: "user", content: query });
     messages.push({ role: "assistant", content: response });
     
     addMessage(response, "assistant");
-    statusEl.textContent = useExternalAPI ? "External API" : "WebLLM";
+    statusEl.textContent = "Ready";
     
   } catch (error) {
     console.error("Error:", error);
