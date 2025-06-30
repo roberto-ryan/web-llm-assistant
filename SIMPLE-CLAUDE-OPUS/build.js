@@ -39,6 +39,6 @@ build({
   outdir: 'dist',
   format: 'esm',
   external: ['@mlc-ai/web-llm'], // WebLLM loads dynamically
-  watch: process.argv.includes('--watch'),
+  // watch: process.argv.includes('--watch'),
   logLevel: 'info'
 }).catch(() => process.exit(1));
