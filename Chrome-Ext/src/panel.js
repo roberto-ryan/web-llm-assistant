@@ -36,11 +36,21 @@ class ElementPickerController {
             script.onload = () => {
                 this.elementManager = new window.ElementManager();
                 this.showLoadedElements();
+                this.connectToJSExecutor();
             };
             document.head.appendChild(script);
             return;
         }
         this.showLoadedElements();
+        this.connectToJSExecutor();
+    }
+    
+    // Connect element manager to JS executor
+    connectToJSExecutor() {
+        if (jsExecutor && this.elementManager) {
+            jsExecutor.setElementManager(this.elementManager);
+            console.log('Element manager connected to JS executor');
+        }
     }
     
     // Show loaded elements in chat on startup
@@ -254,6 +264,11 @@ async function loadSettings() {
   
   // Initialize JS executor with your existing AI functions
   jsExecutor = new JSExecutor(callExternalAPI, callWebLLM);
+  
+  // Connect element manager to JS executor when available
+  if (elementPickerController && elementPickerController.elementManager) {
+    jsExecutor.setElementManager(elementPickerController.elementManager);
+  }
 }
 
 // Initialize WebLLM
@@ -411,11 +426,20 @@ async function handleSend() {
     addMessage(query, "user");
     
     try {
+      // Show element suggestions if available and no specific elements referenced
+      if (jsExecutor && jsExecutor.elementManager && !jsPrompt.includes('@')) {
+        const suggestions = jsExecutor.getElementSuggestions();
+        if (suggestions.length > 0) {
+          const suggestionText = `💡 Available element actions:\n${suggestions.slice(0, 6).join('\n')}${suggestions.length > 6 ? '\n...' : ''}`;
+          addMessage(suggestionText, "system");
+        }
+      }
+      
       addMessage("Generating code...", "system");
       const { code, result } = await jsExecutor.execute(jsPrompt);
       
       if (result.success) {
-        addMessage(`✅ ${result.message}\n\nCode:\n\`\`\`javascript\n${code}\n\`\`\``, "assistant");
+        addMessage(`✅ ${result.message || 'Code executed successfully'}\n\nCode:\n\`\`\`javascript\n${code}\n\`\`\``, "assistant");
       } else {
         addMessage(`❌ ${result.error}\n\nCode:\n\`\`\`javascript\n${code}\n\`\`\``, "error");
       }
@@ -425,6 +449,98 @@ async function handleSend() {
     
     inputEl.value = "";
     return; // Don't process as regular chat
+  }
+  
+  // Check for element interaction shortcuts
+  if (query.startsWith('/click ') && jsExecutor) {
+    const elementRef = query.replace('/click ', '').trim();
+    if (elementRef.startsWith('@')) {
+      const elementId = elementRef.substring(1);
+      addMessage(query, "user");
+      
+      try {
+        addMessage("Generating click code...", "system");
+        const code = await jsExecutor.generateElementInteraction(elementId, 'click');
+        const result = await jsExecutor.runCode(code);
+        
+        if (result.success) {
+          addMessage(`✅ Clicked ${elementRef}\n\nCode:\n\`\`\`javascript\n${code}\n\`\`\``, "assistant");
+        } else {
+          addMessage(`❌ ${result.error}\n\nCode:\n\`\`\`javascript\n${code}\n\`\`\``, "error");
+        }
+      } catch (error) {
+        addMessage(`Error: ${error.message}`, "error");
+      }
+      
+      inputEl.value = "";
+      return;
+    }
+  }
+  
+  // Check for fill shortcuts
+  if (query.startsWith('/fill ') && jsExecutor) {
+    const parts = query.replace('/fill ', '').split(' with ');
+    if (parts.length === 2 && parts[0].startsWith('@')) {
+      const elementId = parts[0].substring(1);
+      const text = parts[1];
+      addMessage(query, "user");
+      
+      try {
+        addMessage("Generating fill code...", "system");
+        const code = await jsExecutor.generateElementInteraction(elementId, 'fill', `with the text: "${text}"`);
+        const result = await jsExecutor.runCode(code);
+        
+        if (result.success) {
+          addMessage(`✅ Filled ${parts[0]} with "${text}"\n\nCode:\n\`\`\`javascript\n${code}\n\`\`\``, "assistant");
+        } else {
+          addMessage(`❌ ${result.error}\n\nCode:\n\`\`\`javascript\n${code}\n\`\`\``, "error");
+        }
+      } catch (error) {
+        addMessage(`Error: ${error.message}`, "error");
+      }
+      
+      inputEl.value = "";
+      return;
+    }
+  }
+  
+  // Check for help command
+  if (query === '/help' || query === '/commands') {
+    addMessage(query, "user");
+    
+    let helpText = `## Available Commands
+
+**JavaScript Execution:**
+- \`/x <prompt>\` - Generate and execute JavaScript code
+- \`/click @elementName\` - Click a stored element
+- \`/fill @elementName with <text>\` - Fill an input element with text
+
+**Element Management:**
+- Click the 🎯 button to start element picker
+- \`rename @oldName newName\` - Rename a stored element
+- Reference elements in any command using \`@elementName\`
+
+**General:**
+- \`/help\` or \`/commands\` - Show this help
+- Type normally for AI chat`;
+
+    if (jsExecutor && jsExecutor.elementManager) {
+      const elements = jsExecutor.elementManager.getAllElements();
+      if (elements.length > 0) {
+        helpText += `\n\n**Your Stored Elements:**\n`;
+        helpText += elements.map(({ displayName, name }) => `- @${displayName} (${name})`).join('\n');
+        
+        const suggestions = jsExecutor.getElementSuggestions();
+        if (suggestions.length > 0) {
+          helpText += `\n\n**Suggested Actions:**\n`;
+          helpText += suggestions.slice(0, 8).map(s => `- /x ${s}`).join('\n');
+        }
+      }
+    }
+    
+    addMessage(helpText, "system");
+    inputEl.value = "";
+    return;
   }
   
   inputEl.value = "";

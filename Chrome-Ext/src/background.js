@@ -89,5 +89,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       .then(result => sendResponse({ success: true, result }))
       .catch(error => sendResponse({ success: false, error: error.toString() }));
     return true; // Will respond asynchronously
+  } else if (request.action === 'elementSelected') {
+    // Forward element selection to the side panel
+    chrome.runtime.sendMessage(request);
+    sendResponse({ success: true });
   }
 });

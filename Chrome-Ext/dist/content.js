@@ -29,6 +29,7 @@
     }
   });
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    var _a;
     if (message.action === "get_page_context") {
       try {
         const currentSelection = window.getSelection().toString().trim();
@@ -70,6 +71,27 @@
         sendResponse({ status: "success" });
       } else {
         sendResponse({ status: "error", message: "Element picker not available" });
+      }
+    } else if (message.action === "getElementData") {
+      try {
+        const element = document.querySelector(message.selector);
+        if (element) {
+          const rect = element.getBoundingClientRect();
+          const data = {
+            exists: true,
+            text: ((_a = element.textContent) == null ? void 0 : _a.trim()) || "",
+            value: element.value || "",
+            tagName: element.tagName.toLowerCase(),
+            className: element.className || "",
+            id: element.id || "",
+            position: { x: rect.left, y: rect.top, width: rect.width, height: rect.height }
+          };
+          sendResponse({ status: "success", data });
+        } else {
+          sendResponse({ status: "error", message: "Element not found" });
+        }
+      } catch (error) {
+        sendResponse({ status: "error", message: error.message });
       }
     }
     return true;
