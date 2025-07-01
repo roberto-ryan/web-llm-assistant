@@ -153,6 +153,24 @@ class ElementPickerController {
         }
     }
     
+    async deleteElement(elementId) {
+        if (!this.elementManager) return false;
+        
+        try {
+            const success = await this.elementManager.deleteElement(elementId);
+            if (success) {
+                addMessage(`🗑️ Deleted element "@${elementId}"`, "system");
+                return true;
+            } else {
+                addMessage(`❌ Failed to delete element "@${elementId}"`, "error");
+                return false;
+            }
+        } catch (error) {
+            addMessage(`❌ Error deleting element: ${error.message}`, "error");
+            return false;
+        }
+    }
+    
     getElementData(elementRef) {
         return this.elementManager?.getElementData(elementRef);
     }

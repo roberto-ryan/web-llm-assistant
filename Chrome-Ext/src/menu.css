@@ -137,3 +137,23 @@
   align-items: center;
   gap: 10px;
 }
+
+/* Element list action buttons */
+.rename-element-btn, .delete-element-btn {
+  transition: background-color 0.2s ease, transform 0.1s ease;
+  font-weight: 500;
+}
+
+.rename-element-btn:hover {
+  background: #ff8556 !important;
+  transform: translateY(-1px);
+}
+
+.delete-element-btn:hover {
+  background: #ff4757 !important;
+  transform: translateY(-1px);
+}
+
+.delete-element-btn:active, .rename-element-btn:active {
+  transform: translateY(0);
+}

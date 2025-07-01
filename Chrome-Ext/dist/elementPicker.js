@@ -50,6 +50,22 @@
         return false;
       }
     }
+    // Delete a single element
+    async deleteElement(elementId) {
+      try {
+        if (!this.elementStore.has(elementId)) {
+          console.warn(`Element "${elementId}" not found`);
+          return false;
+        }
+        this.elementStore.delete(elementId);
+        await this.saveElements();
+        console.log(`Element "${elementId}" deleted successfully`);
+        return true;
+      } catch (error) {
+        console.error("Error deleting element:", error);
+        return false;
+      }
+    }
     // Add a new element
     async addElement(data) {
       const elementId = `element${this.elementCounter}`;

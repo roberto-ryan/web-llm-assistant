@@ -55,6 +55,29 @@ class ElementManager {
         }
     }
     
+    // Delete a single element
+    async deleteElement(elementId) {
+        try {
+            // Check if element exists
+            if (!this.elementStore.has(elementId)) {
+                console.warn(`Element "${elementId}" not found`);
+                return false;
+            }
+            
+            // Remove from store
+            this.elementStore.delete(elementId);
+            
+            // Save to persistent storage
+            await this.saveElements();
+            
+            console.log(`Element "${elementId}" deleted successfully`);
+            return true;
+        } catch (error) {
+            console.error('Error deleting element:', error);
+            return false;
+        }
+    }
+    
     // Add a new element
     async addElement(data) {
         const elementId = `element${this.elementCounter}`;

@@ -237,29 +237,50 @@ export class MenuManager {
     listContainer.innerHTML = elements.map(el => `
       <div style="padding: 8px; margin: 4px 0; background: #333; border-radius: 4px; font-size: 12px;">
         <div style="display: flex; justify-content: space-between; align-items: center;">
-          <div>
+          <div style="flex: 1; min-width: 0;">
             <strong>@${el.displayName}</strong> - ${el.name}
             <br>
             <span style="color: #999;">${el.data.text ? el.data.text.slice(0, 30) + '...' : 'No text'}</span>
           </div>
-          <button class="rename-element-btn" data-element="${el.id}" style="
-            background: #ff6b35; 
-            color: white; 
-            border: none; 
-            padding: 4px 8px; 
-            border-radius: 3px; 
-            cursor: pointer; 
-            font-size: 10px;
-          ">Rename</button>
+          <div style="display: flex; gap: 4px; align-items: center;">
+            <button class="rename-element-btn" data-element="${el.id}" style="
+              background: #ff6b35; 
+              color: white; 
+              border: none; 
+              padding: 4px 8px; 
+              border-radius: 3px; 
+              cursor: pointer; 
+              font-size: 10px;
+            ">Rename</button>
+            <button class="delete-element-btn" data-element="${el.id}" style="
+              background: #dc3545; 
+              color: white; 
+              border: none; 
+              padding: 4px 6px; 
+              border-radius: 3px; 
+              cursor: pointer; 
+              font-size: 10px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            " title="Delete element">×</button>
+          </div>
         </div>
       </div>
     `).join('');
     
-    // Add event listeners for rename buttons
+    // Add event listeners for rename and delete buttons
     listContainer.querySelectorAll('.rename-element-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
         const elementId = e.target.getAttribute('data-element');
         this.handleRenameElement(elementId);
+      });
+    });
+    
+    listContainer.querySelectorAll('.delete-element-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const elementId = e.target.getAttribute('data-element');
+        this.handleDeleteElement(elementId);
       });
     });
   }
@@ -282,6 +303,19 @@ export class MenuManager {
       window.elementPickerController?.renameElement(currentName, newName).then(() => {
         this.refreshElementsList();
       });
+    }
+  }
+
+  handleDeleteElement(elementId) {
+    const element = window.elementPickerController?.getElementData(elementId);
+    if (!element) return;
+    
+    const elementName = element.customName || elementId;
+    const confirmMessage = `Are you sure you want to delete "@${elementName}"? This cannot be undone.`;
+    
+    if (confirm(confirmMessage)) {
+      window.elementPickerController?.deleteElement(elementId);
+      this.refreshElementsList();
     }
   }
 }
