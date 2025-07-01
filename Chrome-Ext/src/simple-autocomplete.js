@@ -111,11 +111,7 @@
           { name: "help", description: "Show help", type: "cmd" },
           { name: "clear", description: "Clear chat", type: "cmd" },
           { name: "picker", description: "Element picker", type: "cmd" },
-          { name: "export", description: "Export chat", type: "cmd" },
-          // Variables
-          { name: "url", description: window.location.href, type: "var" },
-          { name: "title", description: document.title, type: "var" },
-          { name: "domain", description: window.location.hostname, type: "var" }
+          { name: "export", description: "Export chat", type: "cmd" }
         ];
         
         // Filter by query if provided

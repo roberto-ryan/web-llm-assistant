@@ -178,11 +178,7 @@
     ENTRY_TEMPLATES.command("help", "Show autocomplete help"),
     ENTRY_TEMPLATES.command("clear", "Clear chat history"),
     ENTRY_TEMPLATES.command("picker", "Activate element picker"),
-    ENTRY_TEMPLATES.command("export", "Export conversation"),
-    ENTRY_TEMPLATES.variable("url", "Current page URL", () => window.location.href),
-    ENTRY_TEMPLATES.variable("title", "Current page title", () => document.title),
-    ENTRY_TEMPLATES.variable("domain", "Current domain", () => window.location.hostname),
-    ENTRY_TEMPLATES.variable("timestamp", "Current timestamp", () => (/* @__PURE__ */ new Date()).toISOString())
+    ENTRY_TEMPLATES.command("export", "Export conversation")
   ]);
   console.log("\u2713 Autocomplete registry initialized with", window.autocompleteRegistry.entries.length, "entries");
 })();
