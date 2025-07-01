@@ -34,7 +34,6 @@ console.log('\nBuilding JavaScript...');
 // Common build options
 const commonOptions = {
   bundle: true,
-  format: 'esm',
   // watch: process.argv.includes('--watch'),
   logLevel: 'info',
   platform: 'browser',
@@ -49,30 +48,58 @@ Promise.all([
   // Background script - keep as ES module
   build({
     ...commonOptions,
+    format: 'esm',
     entryPoints: ['src/background.js'],
     outfile: 'dist/background.js',
     // Bundle WebLLM for background
   }),
   
-  // Panel script - bundle everything
+  // Panel script - keep as ES module for external imports
   build({
     ...commonOptions,
+    format: 'esm',
     entryPoints: ['src/panel.js'],
     outfile: 'dist/panel.js',
   }),
   
-  // Content and options scripts
+  // Content scripts - use IIFE format
   build({
     ...commonOptions,
-    entryPoints: ['src/content.js', 'src/options.js'],
-    outdir: 'dist',
+    format: 'iife',
+    entryPoints: ['src/content.js'],
+    outfile: 'dist/content.js',
   }),
   
-  // Element picker as standalone module
+  // Options script - use IIFE format
   build({
     ...commonOptions,
+    format: 'iife',
+    entryPoints: ['src/options.js'],
+    outfile: 'dist/options.js',
+  }),
+  
+  // Element picker as standalone IIFE
+  build({
+    ...commonOptions,
+    format: 'iife',
     entryPoints: ['src/elementPicker.js'],
     outfile: 'dist/elementPicker.js',
+  }),
+  
+  // Autocomplete registry as standalone IIFE
+  build({
+    ...commonOptions,
+    format: 'iife',
+    entryPoints: ['src/autocomplete-registry.js'],
+    outfile: 'dist/autocomplete-registry.js',
+  }),
+  
+  // Simple autocomplete module as standalone IIFE
+  build({
+    ...commonOptions,
+    format: 'iife',
+    entryPoints: ['src/simple-autocomplete.js'],
+    outfile: 'dist/simple-autocomplete.js',
   })
 ]).then(() => {
   console.log('\n✅ Build complete! Load the dist/ folder in Chrome.');

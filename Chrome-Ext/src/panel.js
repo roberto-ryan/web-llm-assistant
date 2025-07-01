@@ -460,23 +460,12 @@ inputEl.addEventListener("keydown", (e) => {
   }
 });
 
-// Add simple autocomplete for element references
-inputEl.addEventListener("input", (e) => {
-  const value = e.target.value;
-  const cursorPos = e.target.selectionStart;
-  
-  // Check if user is typing @something
-  const beforeCursor = value.substring(0, cursorPos);
-  const atMatch = beforeCursor.match(/@([a-zA-Z_][a-zA-Z0-9_]*)$/);
-  
-  if (atMatch) {
-    // Show available elements in console for now (could be enhanced with a dropdown)
-    const availableElements = elementPickerController.getAllElements();
-    if (availableElements.length > 0) {
-      console.log("Available elements:", availableElements.map(el => `@${el.displayName} (${el.name})`));
-    }
-  }
-});
-
 // Initialize
 loadSettings();
+
+// Expose functions globally for autocomplete commands
+window.addMessage = addMessage;
+window.handleNewChat = handleNewChat;
+window.messages = messages;
+window.messagesDiv = messagesDiv;
+window.elementPickerController = elementPickerController;
