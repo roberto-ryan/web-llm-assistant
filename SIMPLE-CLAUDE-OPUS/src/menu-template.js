@@ -1,0 +1,158 @@
+// Menu HTML template as a JavaScript module
+export const menuHTML = `
+  <!-- Menu Overlay -->
+  <div id="menu-overlay"></div>
+  
+  <!-- Sliding Menu -->
+  <div id="slide-menu">
+    <div id="menu-header">
+      <span id="menu-title">Tools & Settings</span>
+      <button id="menu-close">×</button>
+    </div>
+    <div id="menu-content">
+      <!-- Chat Tools Section -->
+      <div class="menu-section">
+        <div class="menu-section-header">Chat Tools</div>
+        <button class="menu-item" data-tool="export">Export Chat</button>
+        <button class="menu-item" data-tool="templates">Message Templates</button>
+      </div>
+      
+      <!-- Tool Panels -->
+      <div class="tool-panel" id="tool-templates">
+        <h3>Message Templates</h3>
+        <p>Quick message templates for common tasks.</p>
+        <button class="menu-item">Explain this code</button>
+        <button class="menu-item">Summarize this page</button>
+        <button class="menu-item">Translate to English</button>
+        <button class="menu-item">Find bugs in code</button>
+      </div>
+      
+      <div class="tool-panel" id="tool-export">
+        <h3>Export Chat</h3>
+        <p>Export your conversation to a file.</p>
+        <button class="menu-item">Export as JSON</button>
+        <button class="menu-item">Export as Markdown</button>
+      </div>
+    </div>
+  </div>
+`;
+
+// Menu functionality
+export class MenuManager {
+  constructor(inputElement) {
+    this.inputEl = inputElement;
+    this.menuBtn = null;
+    this.menuOverlay = null;
+    this.slideMenu = null;
+    this.menuClose = null;
+    this.menuItems = null;
+    this.toolPanels = null;
+  }
+
+  init() {
+    // Inject menu HTML
+    document.body.insertAdjacentHTML('afterbegin', menuHTML);
+    
+    // Get DOM elements
+    this.menuBtn = document.getElementById("menu-btn");
+    this.menuOverlay = document.getElementById("menu-overlay");
+    this.slideMenu = document.getElementById("slide-menu");
+    this.menuClose = document.getElementById("menu-close");
+    this.menuItems = document.querySelectorAll(".menu-item[data-tool]");
+    this.toolPanels = document.querySelectorAll(".tool-panel");
+    
+    // Setup event listeners
+    this.setupEventListeners();
+  }
+
+  setupEventListeners() {
+    this.menuBtn?.addEventListener("click", () => this.toggleMenu());
+    this.menuClose?.addEventListener("click", () => this.closeMenu());
+    this.menuOverlay?.addEventListener("click", () => this.closeMenu());
+
+    // Handle menu item clicks
+    this.menuItems?.forEach(item => {
+      item.addEventListener("click", (e) => {
+        const toolId = e.target.getAttribute("data-tool");
+        this.showToolPanel(toolId);
+      });
+    });
+
+    // Handle template clicks
+    document.addEventListener("click", (e) => {
+      if (e.target.classList.contains("menu-item") && 
+          e.target.closest("#tool-templates")) {
+        this.handleTemplateClick(e);
+      }
+    });
+
+    // Close menu with Escape key
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && this.slideMenu?.classList.contains("active")) {
+        this.closeMenu();
+      }
+    });
+  }
+
+  toggleMenu() {
+    const isActive = this.slideMenu?.classList.contains("active");
+    if (isActive) {
+      this.closeMenu();
+    } else {
+      this.openMenu();
+    }
+  }
+
+  openMenu() {
+    this.slideMenu?.classList.add("active");
+    this.menuOverlay?.classList.add("active");
+    this.menuBtn?.classList.add("active");
+    
+    // Hide all tool panels when opening menu
+    this.toolPanels?.forEach(panel => panel.classList.remove("active"));
+    this.menuItems?.forEach(item => item.classList.remove("active"));
+  }
+
+  closeMenu() {
+    this.slideMenu?.classList.remove("active");
+    this.menuOverlay?.classList.remove("active");
+    this.menuBtn?.classList.remove("active");
+    
+    // Hide all tool panels
+    this.toolPanels?.forEach(panel => panel.classList.remove("active"));
+    this.menuItems?.forEach(item => item.classList.remove("active"));
+  }
+
+  showToolPanel(toolId) {
+    // Hide all tool panels first
+    this.toolPanels?.forEach(panel => panel.classList.remove("active"));
+    this.menuItems?.forEach(item => item.classList.remove("active"));
+    
+    // Show the selected tool panel
+    const targetPanel = document.getElementById(`tool-${toolId}`);
+    const targetItem = document.querySelector(`[data-tool="${toolId}"]`);
+    
+    if (targetPanel) {
+      targetPanel.classList.add("active");
+    }
+    if (targetItem) {
+      targetItem.classList.add("active");
+    }
+  }
+
+  handleTemplateClick(e) {
+    const templates = {
+      "Explain this code": "Please explain the selected code and how it works.",
+      "Summarize this page": "Please provide a summary of this page's main content.",
+      "Translate to English": "Please translate the selected text to English.",
+      "Find bugs in code": "Please review the selected code and identify any potential bugs or issues."
+    };
+    
+    const templateText = templates[e.target.textContent];
+    if (templateText && this.inputEl) {
+      this.inputEl.value = templateText;
+      this.inputEl.focus();
+      this.closeMenu();
+    }
+  }
+}

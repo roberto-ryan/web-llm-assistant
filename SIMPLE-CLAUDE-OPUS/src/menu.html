@@ -1,0 +1,119 @@
+<!-- Menu Overlay -->
+<div id="menu-overlay"></div>
+
+<!-- Sliding Menu -->
+<div id="slide-menu">
+  <div id="menu-header">
+    <span id="menu-title">Tools & Settings</span>
+    <button id="menu-close">×</button>
+  </div>
+  <div id="menu-content">
+    <!-- Chat Tools Section -->
+    <div class="menu-section">
+      <div class="menu-section-header">Chat Tools</div>
+      <button class="menu-item" data-tool="export">Export Chat</button>
+      <button class="menu-item" data-tool="import">Import Chat</button>
+      <button class="menu-item" data-tool="templates">Message Templates</button>
+    </div>
+    
+    <!-- AI Settings Section -->
+    <div class="menu-section">
+      <div class="menu-section-header">AI Settings</div>
+      <button class="menu-item" data-tool="model-settings">Model Settings</button>
+      <button class="menu-item" data-tool="system-prompt">System Prompt</button>
+      <button class="menu-item" data-tool="conversation-settings">Conversation Settings</button>
+    </div>
+    
+    <!-- Page Tools Section -->
+    <div class="menu-section">
+      <div class="menu-section-header">Page Tools</div>
+      <button class="menu-item" data-tool="summarizer">Page Summarizer</button>
+      <button class="menu-item" data-tool="translator">Text Translator</button>
+      <button class="menu-item" data-tool="extractor">Content Extractor</button>
+    </div>
+    
+    <!-- Tool Panels (Initially Hidden) -->
+    <div class="tool-panel" id="tool-export">
+      <h3>Export Chat</h3>
+      <p>Export your current conversation to a file.</p>
+      <button class="menu-item">Export as JSON</button>
+      <button class="menu-item">Export as Markdown</button>
+    </div>
+    
+    <div class="tool-panel" id="tool-import">
+      <h3>Import Chat</h3>
+      <p>Import a previously exported conversation.</p>
+      <input type="file" accept=".json,.md" style="margin: 10px 0; width: 100%;">
+      <button class="menu-item">Import File</button>
+    </div>
+    
+    <div class="tool-panel" id="tool-templates">
+      <h3>Message Templates</h3>
+      <p>Quick message templates for common tasks.</p>
+      <button class="menu-item">Explain this code</button>
+      <button class="menu-item">Summarize this page</button>
+      <button class="menu-item">Translate to English</button>
+      <button class="menu-item">Find bugs in code</button>
+    </div>
+    
+    <div class="tool-panel" id="tool-model-settings">
+      <h3>Model Settings</h3>
+      <p>Configure AI model parameters.</p>
+      <label style="display: block; margin: 10px 0;">
+        Temperature: <input type="range" min="0" max="2" step="0.1" value="0.7" style="width: 100%;">
+      </label>
+      <label style="display: block; margin: 10px 0;">
+        Max Tokens: <input type="number" value="1000" style="width: 100%; padding: 5px;">
+      </label>
+    </div>
+    
+    <div class="tool-panel" id="tool-system-prompt">
+      <h3>System Prompt</h3>
+      <p>Customize the AI's behavior.</p>
+      <textarea style="width: 100%; height: 100px; margin: 10px 0; padding: 8px; background: #2a2a2a; color: #e0e0e0; border: 1px solid #444; border-radius: 4px;" placeholder="Enter custom system prompt..."></textarea>
+      <button class="menu-item">Save Prompt</button>
+    </div>
+    
+    <div class="tool-panel" id="tool-conversation-settings">
+      <h3>Conversation Settings</h3>
+      <p>Configure how conversations work.</p>
+      <label style="display: block; margin: 10px 0;">
+        <input type="checkbox"> Auto-clear after 50 messages
+      </label>
+      <label style="display: block; margin: 10px 0;">
+        <input type="checkbox"> Include page context by default
+      </label>
+    </div>
+    
+    <div class="tool-panel" id="tool-summarizer">
+      <h3>Page Summarizer</h3>
+      <p>Summarize the current page content.</p>
+      <button class="menu-item">Quick Summary</button>
+      <button class="menu-item">Detailed Analysis</button>
+      <button class="menu-item">Key Points Only</button>
+    </div>
+    
+    <div class="tool-panel" id="tool-translator">
+      <h3>Text Translator</h3>
+      <p>Translate selected text or page content.</p>
+      <select style="width: 100%; margin: 10px 0; padding: 5px; background: #2a2a2a; color: #e0e0e0; border: 1px solid #444;">
+        <option>Spanish</option>
+        <option>French</option>
+        <option>German</option>
+        <option>Japanese</option>
+        <option>Chinese</option>
+      </select>
+      <button class="menu-item">Translate Selection</button>
+      <button class="menu-item">Translate Page</button>
+    </div>
+    
+    <div class="tool-panel" id="tool-extractor">
+      <h3>Content Extractor</h3>
+      <p>Extract specific content from the page.</p>
+      <button class="menu-item">Extract Links</button>
+      <button class="menu-item">Extract Images</button>
+      <button class="menu-item">Extract Tables</button>
+      <button class="menu-item">Extract Code Blocks</button>
+    </div>
+  </div>
+</div>

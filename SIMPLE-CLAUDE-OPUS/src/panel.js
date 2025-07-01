@@ -1,12 +1,16 @@
 // Panel script with external API primary, WebLLM fallback
 import showdown from "showdown";
 import { ServiceWorkerMLCEngine } from "@mlc-ai/web-llm";
+import { MenuManager } from "./menu-template.js";
 
 const messagesDiv = document.getElementById("messages");
 const inputEl = document.getElementById("input");
 const sendBtn = document.getElementById("send");
 const newChatBtn = document.getElementById("new-chat-btn");
 const statusEl = document.getElementById("status");
+
+// Initialize menu manager
+const menuManager = new MenuManager(inputEl);
 
 const markdownConverter = new showdown.Converter({
   simplifiedAutoLink: true,
@@ -43,6 +47,9 @@ async function loadSettings() {
     statusEl.textContent = "Loading WebLLM...";
     await initWebLLM(webllmModel, false);
   }
+  
+  // Initialize menu after settings are loaded
+  menuManager.init();
 }
 
 // Initialize WebLLM
