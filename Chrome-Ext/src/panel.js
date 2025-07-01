@@ -123,11 +123,22 @@ class ElementPickerController {
         const elementSummary = this.elementManager.formatElementSummary(result.data, result.id);
         addMessage(elementSummary, "system");
         
-        // Add element reference to input if it's empty, otherwise just show the notification
-        if (!inputEl.value.trim()) {
-            inputEl.value = `Analyze @${result.id}`;
-            inputEl.focus();
+        // Always add element reference to input
+        const currentValue = inputEl.value;
+        const elementRef = `@${result.id}`;
+        
+        // If input is empty, add "Analyze @elementN", otherwise append " @elementN" to existing text
+        if (!currentValue.trim()) {
+            inputEl.value = `Analyze ${elementRef}`;
+        } else {
+            // Add a space before the element reference if the input doesn't end with whitespace
+            const separator = currentValue.endsWith(' ') ? '' : ' ';
+            inputEl.value = currentValue + separator + elementRef;
         }
+        
+        // Focus and place cursor at the end
+        inputEl.focus();
+        inputEl.setSelectionRange(inputEl.value.length, inputEl.value.length);
     }
     
     // Delegate methods to ElementManager
