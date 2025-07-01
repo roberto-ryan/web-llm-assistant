@@ -114,6 +114,12 @@ async function getPageContext() {
     if (tab.id) {
       const response = await chrome.tabs.sendMessage(tab.id, { action: "get_page_context" });
       if (response && response.status === "success") {
+        console.log("Panel - Received page context:", {
+          hasSelection: !!response.data.selection,
+          selectionLength: response.data.selection?.length || 0,
+          hasVisibleText: !!response.data.visibleText,
+          selection: response.data.selection?.substring(0, 100) + (response.data.selection?.length > 100 ? "..." : "")
+        });
         return response.data;
       }
     }

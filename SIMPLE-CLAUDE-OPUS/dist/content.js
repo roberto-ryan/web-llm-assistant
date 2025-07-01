@@ -1,8 +1,21 @@
 // src/content.js
+var lastSelection = "";
+document.addEventListener("selectionchange", () => {
+  const selection = window.getSelection().toString().trim();
+  if (selection) {
+    lastSelection = selection;
+    console.log("Selection stored:", selection.substring(0, 50) + "...");
+  }
+});
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === "get_page_context") {
     try {
-      const selection = window.getSelection().toString();
+      const currentSelection = window.getSelection().toString().trim();
+      const selection = currentSelection || lastSelection;
+      console.log(
+        "Getting page context - using selection:",
+        selection ? selection.substring(0, 50) + "..." : "none"
+      );
       const context = {
         url: window.location.href,
         title: document.title,
@@ -12,6 +25,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       };
       sendResponse({ status: "success", data: context });
     } catch (error) {
+      console.error("Content script error:", error);
       sendResponse({ status: "error", message: error.message });
     }
   }
