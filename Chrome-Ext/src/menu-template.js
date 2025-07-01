@@ -15,6 +15,7 @@ export const menuHTML = `
         <div class="menu-section-header">Chat Tools</div>
         <button class="menu-item" data-tool="export">Export Chat</button>
         <button class="menu-item" data-tool="templates">Message Templates</button>
+        <button class="menu-item" data-tool="elements">Manage Elements</button>
       </div>
       
       <!-- Tool Panels -->
@@ -32,6 +33,16 @@ export const menuHTML = `
         <p>Export your conversation to a file.</p>
         <button class="menu-item">Export as JSON</button>
         <button class="menu-item">Export as Markdown</button>
+      </div>
+      
+      <div class="tool-panel" id="tool-elements">
+        <h3>Stored Elements</h3>
+        <p>Manage your saved page elements.</p>
+        <div id="elements-list">
+          <!-- Elements will be populated here -->
+        </div>
+        <button class="menu-item" id="clear-elements-btn">Clear All Elements</button>
+        <button class="menu-item" id="refresh-elements-btn">Refresh List</button>
       </div>
     </div>
   </div>
@@ -95,6 +106,15 @@ export class MenuManager {
       }
     });
 
+    // Handle element management clicks
+    document.addEventListener("click", (e) => {
+      if (e.target.id === "clear-elements-btn") {
+        this.handleClearElements();
+      } else if (e.target.id === "refresh-elements-btn") {
+        this.refreshElementsList();
+      }
+    });
+
     // Close menu with Escape key
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape" && this.slideMenu?.classList.contains("active")) {
@@ -147,6 +167,11 @@ export class MenuManager {
     if (targetItem) {
       targetItem.classList.add("active");
     }
+    
+    // If showing elements panel, refresh the list
+    if (toolId === 'elements') {
+      this.refreshElementsList();
+    }
   }
 
   handleTemplateClick(e) {
@@ -194,5 +219,34 @@ export class MenuManager {
     link.href = URL.createObjectURL(new Blob([content]));
     link.download = `chat-${Date.now()}.${ext}`;
     link.click();
+  }
+
+  // Element management functionality
+  refreshElementsList() {
+    const listContainer = document.getElementById('elements-list');
+    if (!listContainer) return;
+    
+    // Get elements from the controller (assuming it's globally accessible)
+    const elements = window.elementPickerController?.getAllElements() || [];
+    
+    if (elements.length === 0) {
+      listContainer.innerHTML = '<p style="color: #999; font-style: italic;">No stored elements</p>';
+      return;
+    }
+    
+    listContainer.innerHTML = elements.map(el => `
+      <div style="padding: 8px; margin: 4px 0; background: #333; border-radius: 4px; font-size: 12px;">
+        <strong>@${el.id}</strong> - ${el.name}
+        <br>
+        <span style="color: #999;">${el.data.text ? el.data.text.slice(0, 40) + '...' : 'No text'}</span>
+      </div>
+    `).join('');
+  }
+
+  handleClearElements() {
+    if (confirm('Are you sure you want to clear all stored elements? This cannot be undone.')) {
+      window.elementPickerController?.clearStoredElements();
+      this.refreshElementsList();
+    }
   }
 }

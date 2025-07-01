@@ -18,7 +18,69 @@ class ElementPickerController {
     constructor() {
         this.elementStore = new Map(); // Store elements by ID
         this.elementCounter = 1;
+        this.storageKey = 'web_llm_elements';
         this.setupEventListeners();
+        this.loadStoredElements();
+    }
+    
+    // Load elements from Chrome storage
+    async loadStoredElements() {
+        try {
+            const result = await chrome.storage.local.get([this.storageKey]);
+            if (result[this.storageKey]) {
+                const stored = result[this.storageKey];
+                this.elementStore = new Map(stored.elements || []);
+                this.elementCounter = stored.counter || 1;
+                console.log(`Loaded ${this.elementStore.size} stored elements`);
+                
+                // Show loaded elements in chat
+                if (this.elementStore.size > 0) {
+                    const elementList = Array.from(this.elementStore.entries())
+                        .map(([id, data]) => {
+                            const name = data.id ? `#${data.id}` : 
+                                        data.className ? `.${data.className.split(' ')[0]}` : 
+                                        `<${data.tagName}>`;
+                            return `@${id} (${name})`;
+                        }).join(', ');
+                    
+                    addMessage(`📌 Restored ${this.elementStore.size} saved elements: ${elementList}`, "system");
+                }
+            }
+        } catch (error) {
+            console.error('Error loading stored elements:', error);
+        }
+    }
+    
+    // Save elements to Chrome storage
+    async saveElements() {
+        try {
+            const dataToStore = {
+                elements: Array.from(this.elementStore.entries()),
+                counter: this.elementCounter,
+                timestamp: Date.now()
+            };
+            
+            await chrome.storage.local.set({
+                [this.storageKey]: dataToStore
+            });
+            
+            console.log('Elements saved to storage');
+        } catch (error) {
+            console.error('Error saving elements:', error);
+        }
+    }
+    
+    // Clear all stored elements
+    async clearStoredElements() {
+        try {
+            this.elementStore.clear();
+            this.elementCounter = 1;
+            await chrome.storage.local.remove([this.storageKey]);
+            addMessage("🗑️ All stored elements cleared", "system");
+            console.log('All stored elements cleared');
+        } catch (error) {
+            console.error('Error clearing elements:', error);
+        }
     }
     
     setupEventListeners() {
@@ -79,6 +141,9 @@ class ElementPickerController {
         
         // Store the element data
         this.elementStore.set(elementId, data);
+        
+        // Save to persistent storage
+        this.saveElements();
         
         // Show a clean summary message in the chat
         const elementSummary = this.formatElementSummary(data, elementId);
@@ -180,6 +245,9 @@ ${styles}
 
 // Initialize element picker controller
 const elementPickerController = new ElementPickerController();
+
+// Make it globally accessible for menu
+window.elementPickerController = elementPickerController;
 
 const markdownConverter = new showdown.Converter({
   simplifiedAutoLink: true,
@@ -352,8 +420,23 @@ function handleNewChat() {
   // Focus input
   inputEl.focus();
   
-  // Optional: Show a welcome message
-  addMessage("Chat cleared. How can I help you?", "system");
+  // Show welcome message with element info
+  const storedElementsCount = elementPickerController.elementStore.size;
+  let welcomeMessage = "Chat cleared. How can I help you?";
+  
+  if (storedElementsCount > 0) {
+    const elementList = Array.from(elementPickerController.elementStore.entries())
+      .map(([id, data]) => {
+        const name = data.id ? `#${data.id}` : 
+                    data.className ? `.${data.className.split(' ')[0]}` : 
+                    `<${data.tagName}>`;
+        return `@${id}`;
+      }).slice(0, 5).join(', '); // Show first 5
+    
+    welcomeMessage += `\n\n📌 Available elements: ${elementList}${storedElementsCount > 5 ? ` (+${storedElementsCount - 5} more)` : ''}`;
+  }
+  
+  addMessage(welcomeMessage, "system");
 }
 
 // Handle message sending
