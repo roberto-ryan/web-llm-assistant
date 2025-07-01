@@ -90,6 +90,11 @@
       align-items: center;
       gap: 10px;
     }
+    #header-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
     #menu-btn {
       padding: 8px;
       background: #3a4a5a;
@@ -230,6 +235,38 @@
       line-height: 1.4;
       margin-bottom: 10px;
     }
+    
+    /* Element picker button styles */
+    .picker-btn {
+      background: #ff6b35 !important;
+      color: white !important;
+      border: none !important;
+      padding: 8px 12px !important;
+      border-radius: 6px !important;
+      cursor: pointer !important;
+      font-size: 14px !important;
+      display: flex !important;
+      align-items: center !important;
+      gap: 6px !important;
+      transition: all 0.2s ease !important;
+      min-width: auto !important;
+      height: 32px !important;
+    }
+    
+    .picker-btn:hover {
+      background: #e55a2b !important;
+      transform: translateY(-1px) !important;
+    }
+    
+    .picker-btn.active {
+      background: #d14d20 !important;
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3) !important;
+      transform: translateY(1px) !important;
+    }
+    
+    .picker-btn .btn-icon {
+      font-size: 16px !important;
+    }
   </style>
 </head>
 <body>
@@ -238,7 +275,12 @@
       <button id="menu-btn">☰</button>
       <div id="status">Connecting to AI...</div>
     </div>
-    <button id="new-chat-btn">New Chat</button>
+    <div id="header-right">
+      <button id="element-picker-btn" class="picker-btn" title="Pick Element">
+        <span class="btn-icon">🎯</span>
+      </button>
+      <button id="new-chat-btn">New Chat</button>
+    </div>
   </div>
   <div id="messages"></div>
   <div id="input-area">

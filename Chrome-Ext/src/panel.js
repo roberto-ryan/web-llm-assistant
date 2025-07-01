@@ -7,10 +7,106 @@ const messagesDiv = document.getElementById("messages");
 const inputEl = document.getElementById("input");
 const sendBtn = document.getElementById("send");
 const newChatBtn = document.getElementById("new-chat-btn");
+const elementPickerBtn = document.getElementById("element-picker-btn");
 const statusEl = document.getElementById("status");
 
 // Initialize menu manager
 const menuManager = new MenuManager(inputEl);
+
+// Element Picker Controller
+class ElementPickerController {
+    constructor() {
+        this.setupEventListeners();
+    }
+    
+    setupEventListeners() {
+        elementPickerBtn?.addEventListener('click', () => this.togglePicker());
+        
+        chrome.runtime.onMessage.addListener((msg) => {
+            if (msg.action === 'elementSelected') {
+                this.insertElement(msg.data);
+                this.setPickerActive(false);
+            }
+        });
+    }
+    
+    togglePicker() {
+        const isActive = elementPickerBtn.classList.contains('active');
+        
+        if (isActive) {
+            this.stopPicker();
+            this.setPickerActive(false);
+        } else {
+            this.startPicker();
+            this.setPickerActive(true);
+        }
+    }
+    
+    startPicker() {
+        chrome.tabs.query({active: true, currentWindow: true}, 
+            tabs => chrome.tabs.sendMessage(tabs[0].id, {action: 'startPicker'}, (response) => {
+                if (chrome.runtime.lastError) {
+                    console.error('Error starting picker:', chrome.runtime.lastError);
+                } else if (response && response.status === 'error') {
+                    console.error('Picker error:', response.message);
+                }
+            })
+        );
+    }
+    
+    stopPicker() {
+        chrome.tabs.query({active: true, currentWindow: true}, 
+            tabs => chrome.tabs.sendMessage(tabs[0].id, {action: 'stopPicker'}, (response) => {
+                if (chrome.runtime.lastError) {
+                    console.error('Error stopping picker:', chrome.runtime.lastError);
+                } else if (response && response.status === 'error') {
+                    console.error('Picker error:', response.message);
+                }
+            })
+        );
+    }
+    
+    setPickerActive(active) {
+        elementPickerBtn?.classList.toggle('active', active);
+    }
+    
+    insertElement(data) {
+        const elementInfo = this.formatElementInfo(data);
+        inputEl.value = `Analyze this element:\n\n${elementInfo}`;
+        inputEl.focus();
+        
+        // Auto-resize textarea
+        inputEl.style.height = 'auto';
+        inputEl.style.height = inputEl.scrollHeight + 'px';
+    }
+    
+    formatElementInfo(data) {
+        const styles = Object.entries(data.styles)
+            .filter(([key, value]) => value && value !== 'none' && value !== 'auto')
+            .map(([key, value]) => `  ${key}: ${value}`)
+            .join('\n');
+            
+        return `Element: ${data.selector}
+Tag: <${data.tagName}>
+${data.id ? `ID: ${data.id}` : ''}
+${data.className ? `Classes: ${data.className}` : ''}
+
+HTML:
+\`\`\`html
+${data.html}
+\`\`\`
+
+${data.text ? `Text: "${data.text}"` : ''}
+
+Key Styles:
+\`\`\`css
+${styles}
+\`\`\``;
+    }
+}
+
+// Initialize element picker controller
+const elementPickerController = new ElementPickerController();
 
 const markdownConverter = new showdown.Converter({
   simplifiedAutoLink: true,

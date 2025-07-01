@@ -13,7 +13,8 @@ const staticFiles = [
   'manifest.json',
   'panel.html',
   'options.html',
-  'icon.png'
+  'icon.png',
+  'elementPicker.css'
 ];
 
 staticFiles.forEach(file => {
@@ -65,6 +66,13 @@ Promise.all([
     ...commonOptions,
     entryPoints: ['src/content.js', 'src/options.js'],
     outdir: 'dist',
+  }),
+  
+  // Element picker as standalone module
+  build({
+    ...commonOptions,
+    entryPoints: ['src/elementPicker.js'],
+    outfile: 'dist/elementPicker.js',
   })
 ]).then(() => {
   console.log('\n✅ Build complete! Load the dist/ folder in Chrome.');

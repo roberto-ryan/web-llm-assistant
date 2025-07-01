@@ -1,5 +1,23 @@
 // src/content.js
 var lastSelection = "";
+var picker = null;
+function initializePicker() {
+  if (window.ElementPicker && !picker) {
+    picker = new window.ElementPicker();
+    console.log("Element picker initialized successfully");
+  } else if (!window.ElementPicker) {
+    console.log("ElementPicker not available yet");
+  }
+}
+function waitForElementPicker() {
+  if (window.ElementPicker) {
+    initializePicker();
+  } else {
+    console.log("Waiting for ElementPicker...");
+    setTimeout(waitForElementPicker, 50);
+  }
+}
+waitForElementPicker();
 document.addEventListener("selectionchange", () => {
   const selection = window.getSelection().toString().trim();
   if (selection) {
@@ -27,6 +45,28 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     } catch (error) {
       console.error("Content script error:", error);
       sendResponse({ status: "error", message: error.message });
+    }
+  } else if (message.action === "startPicker") {
+    console.log("Received startPicker message");
+    if (!picker) {
+      console.log("Picker not initialized, trying to initialize...");
+      initializePicker();
+    }
+    if (picker) {
+      console.log("Starting picker...");
+      picker.start();
+      sendResponse({ status: "success" });
+    } else {
+      console.error("Element picker not available");
+      sendResponse({ status: "error", message: "Element picker not available" });
+    }
+  } else if (message.action === "stopPicker") {
+    console.log("Received stopPicker message");
+    if (picker) {
+      picker.stop();
+      sendResponse({ status: "success" });
+    } else {
+      sendResponse({ status: "error", message: "Element picker not available" });
     }
   }
   return true;
