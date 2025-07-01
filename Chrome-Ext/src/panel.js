@@ -13,74 +13,54 @@ const statusEl = document.getElementById("status");
 // Initialize menu manager
 const menuManager = new MenuManager(inputEl);
 
-// Element Picker Controller
+// Import element management - we'll create a dynamic import to avoid module issues
+let ElementManager;
+
+// Element Picker Controller - now just handles UI and delegates to ElementManager
 class ElementPickerController {
     constructor() {
-        this.elementStore = new Map(); // Store elements by ID
-        this.elementCounter = 1;
-        this.storageKey = 'web_llm_elements';
+        this.elementManager = null;
+        this.initElementManager();
         this.setupEventListeners();
-        this.loadStoredElements();
     }
     
-    // Load elements from Chrome storage
-    async loadStoredElements() {
-        try {
-            const result = await chrome.storage.local.get([this.storageKey]);
-            if (result[this.storageKey]) {
-                const stored = result[this.storageKey];
-                this.elementStore = new Map(stored.elements || []);
-                this.elementCounter = stored.counter || 1;
-                console.log(`Loaded ${this.elementStore.size} stored elements`);
-                
-                // Show loaded elements in chat
-                if (this.elementStore.size > 0) {
-                    const elementList = Array.from(this.elementStore.entries())
-                        .map(([id, data]) => {
-                            const name = data.id ? `#${data.id}` : 
-                                        data.className ? `.${data.className.split(' ')[0]}` : 
-                                        `<${data.tagName}>`;
-                            return `@${id} (${name})`;
-                        }).join(', ');
-                    
-                    addMessage(`📌 Restored ${this.elementStore.size} saved elements: ${elementList}`, "system");
-                }
-            }
-        } catch (error) {
-            console.error('Error loading stored elements:', error);
-        }
-    }
-    
-    // Save elements to Chrome storage
-    async saveElements() {
-        try {
-            const dataToStore = {
-                elements: Array.from(this.elementStore.entries()),
-                counter: this.elementCounter,
-                timestamp: Date.now()
+    async initElementManager() {
+        // Dynamic import to avoid circular dependencies
+        if (typeof window !== 'undefined' && window.ElementManager) {
+            this.elementManager = new window.ElementManager();
+        } else {
+            // Fallback: load from script
+            const script = document.createElement('script');
+            script.src = './elementPicker.js';
+            script.onload = () => {
+                this.elementManager = new window.ElementManager();
+                this.showLoadedElements();
             };
-            
-            await chrome.storage.local.set({
-                [this.storageKey]: dataToStore
-            });
-            
-            console.log('Elements saved to storage');
-        } catch (error) {
-            console.error('Error saving elements:', error);
+            document.head.appendChild(script);
+            return;
         }
+        this.showLoadedElements();
     }
     
-    // Clear all stored elements
-    async clearStoredElements() {
-        try {
-            this.elementStore.clear();
-            this.elementCounter = 1;
-            await chrome.storage.local.remove([this.storageKey]);
-            addMessage("🗑️ All stored elements cleared", "system");
-            console.log('All stored elements cleared');
-        } catch (error) {
-            console.error('Error clearing elements:', error);
-        }
+    // Show loaded elements in chat on startup
+    async showLoadedElements() {
+        if (!this.elementManager) return;
+        
+        // Wait a bit for elements to load
+        setTimeout(() => {
+            const storedElementsCount = this.elementManager.elementStore.size;
+            if (storedElementsCount > 0) {
+                const elementList = Array.from(this.elementManager.elementStore.entries())
+                    .map(([id, data]) => {
+                        const name = data.id ? `#${data.id}` : 
+                                    data.className ? `.${data.className.split(' ')[0]}` : 
+                                    `<${data.tagName}>`;
+                        return `@${id} (${name})`;
+                    }).join(', ');
+                
+                addMessage(`📌 Restored ${storedElementsCount} saved elements: ${elementList}`, "system");
+            }
+        }, 100);
     }
     
     setupEventListeners() {
@@ -94,7 +74,7 @@ class ElementPickerController {
         });
     }
     
-    togglePicker() {
+    async togglePicker() {
         const isActive = elementPickerBtn.classList.contains('active');
         
         if (isActive) {
@@ -134,112 +114,60 @@ class ElementPickerController {
         elementPickerBtn?.classList.toggle('active', active);
     }
     
-    insertElement(data) {
-        // Generate unique element ID
-        const elementId = `element${this.elementCounter}`;
-        this.elementCounter++;
+    async insertElement(data) {
+        if (!this.elementManager) return;
         
-        // Store the element data
-        this.elementStore.set(elementId, data);
+        const result = await this.elementManager.addElement(data);
         
-        // Save to persistent storage
-        this.saveElements();
-        
-        // Show a clean summary message in the chat
-        const elementSummary = this.formatElementSummary(data, elementId);
+        // Show a clean summary message in the chat with rename option
+        const elementSummary = this.elementManager.formatElementSummary(result.data, result.id);
         addMessage(elementSummary, "system");
         
         // Add element reference to input if it's empty, otherwise just show the notification
         if (!inputEl.value.trim()) {
-            inputEl.value = `Analyze @${elementId}`;
+            inputEl.value = `Analyze @${result.id}`;
             inputEl.focus();
         }
     }
     
-    formatElementSummary(data, elementId) {
-        const elementName = data.id ? `#${data.id}` : 
-                           data.className ? `.${data.className.split(' ')[0]}` : 
-                           `<${data.tagName}>`;
+    // Delegate methods to ElementManager
+    async renameElement(currentName, newName) {
+        if (!this.elementManager) return false;
         
-        const text = data.text ? ` - "${data.text.slice(0, 50)}${data.text.length > 50 ? '...' : ''}"` : '';
-        
-        return `🎯 **@${elementId}** saved: ${elementName}${text}`;
-    }
-    
-    // Get element data by reference (e.g., "element1")
-    getElementData(elementRef) {
-        return this.elementStore.get(elementRef);
-    }
-    
-    // Get all stored elements
-    getAllElements() {
-        return Array.from(this.elementStore.entries()).map(([id, data]) => ({
-            id,
-            data,
-            name: data.id ? `#${data.id}` : 
-                  data.className ? `.${data.className.split(' ')[0]}` : 
-                  `<${data.tagName}>`
-        }));
-    }
-    
-    // Process message to replace element references with actual data
-    processElementReferences(message) {
-        const elementPattern = /@(element\d+)/g;
-        let processedMessage = message;
-        let foundElements = [];
-        
-        message.replace(elementPattern, (match, elementId) => {
-            const elementData = this.getElementData(elementId);
-            if (elementData) {
-                foundElements.push({ id: elementId, data: elementData });
-            }
-            return match;
-        });
-        
-        // If we found element references, append their detailed info
-        if (foundElements.length > 0) {
-            processedMessage += '\n\n--- Referenced Elements ---\n';
-            foundElements.forEach(({ id, data }) => {
-                processedMessage += `\n@${id}:\n${this.formatElementInfo(data)}\n`;
-            });
+        try {
+            await this.elementManager.renameElement(currentName, newName);
+            addMessage(`✅ Renamed "@${currentName}" to "@${newName}"`, "system");
+            return true;
+        } catch (error) {
+            addMessage(`❌ ${error.message}`, "error");
+            return false;
         }
-        
-        return processedMessage;
     }
     
-    formatElementInfo(data) {
-        // Helper function to escape HTML
-        const escapeHtml = (unsafe) => {
-            return unsafe
-                .replace(/&/g, "&amp;")
-                .replace(/</g, "&lt;")
-                .replace(/>/g, "&gt;")
-                .replace(/"/g, "&quot;")
-                .replace(/'/g, "&#039;");
-        };
+    async clearStoredElements() {
+        if (!this.elementManager) return;
         
-        const styles = Object.entries(data.styles || {})
-            .filter(([key, value]) => value && value !== 'none' && value !== 'auto' && value !== '')
-            .map(([key, value]) => `  ${key}: ${value}`)
-            .join('\n');
-            
-        return `Element: ${data.selector}
-Tag: <${data.tagName}>
-${data.id ? `ID: ${data.id}` : ''}
-${data.className ? `Classes: ${data.className}` : ''}
-${data.position ? `Position: ${data.position.x}px, ${data.position.y}px (${data.position.width}x${data.position.height})` : ''}
-
-HTML:
-\`\`\`html
-${data.html}
-\`\`\`
-
-${data.text ? `Text Content: "${data.text}"` : ''}
-
-Key Styles:
-\`\`\`css
-${styles}
-\`\`\``;
+        const success = await this.elementManager.clearStoredElements();
+        if (success) {
+            addMessage("🗑️ All stored elements cleared", "system");
+        }
+    }
+    
+    getElementData(elementRef) {
+        return this.elementManager?.getElementData(elementRef);
+    }
+    
+    getAllElements() {
+        return this.elementManager?.getAllElements() || [];
+    }
+    
+    processElementReferences(message) {
+        return this.elementManager?.processElementReferences(message) || message;
+    }
+    
+    // Expose elementStore for compatibility
+    get elementStore() {
+        return this.elementManager?.elementStore || new Map();
     }
 }
 
@@ -427,10 +355,7 @@ function handleNewChat() {
   if (storedElementsCount > 0) {
     const elementList = Array.from(elementPickerController.elementStore.entries())
       .map(([id, data]) => {
-        const name = data.id ? `#${data.id}` : 
-                    data.className ? `.${data.className.split(' ')[0]}` : 
-                    `<${data.tagName}>`;
-        return `@${id}`;
+        return `@${data.customName || id}`;
       }).slice(0, 5).join(', '); // Show first 5
     
     welcomeMessage += `\n\n📌 Available elements: ${elementList}${storedElementsCount > 5 ? ` (+${storedElementsCount - 5} more)` : ''}`;
@@ -447,6 +372,16 @@ async function handleSend() {
   inputEl.value = "";
   sendBtn.disabled = true;
   
+  // Check for rename command: "rename @oldname newname"
+  const renameMatch = query.match(/^rename\s+@([a-zA-Z_][a-zA-Z0-9_]*)\s+([a-zA-Z_][a-zA-Z0-9_]*)$/i);
+  if (renameMatch) {
+    const [, oldName, newName] = renameMatch;
+    await elementPickerController.renameElement(oldName, newName);
+    sendBtn.disabled = false;
+    inputEl.focus();
+    return;
+  }
+  
   // Process element references in the query
   const processedQuery = elementPickerController.processElementReferences(query);
   
@@ -461,7 +396,8 @@ async function handleSend() {
     content: `You are a helpful AI assistant running in the user's browser. 
 ${context ? `Current page: ${context.title} (${context.url})
 ${context.selection ? `Selected text: "${context.selection}"` : `Page preview: ${context.visibleText}`}` : ''}
-When users reference @element1, @element2, etc., these refer to specific web elements they've selected. The detailed element information will be included in their message.
+When users reference @elementN or custom names like @login, @button, etc., these refer to specific web elements they've selected. The detailed element information will be included in their message.
+Users can rename elements using "rename @oldname newname" command.
 Provide helpful, concise responses.`
   };
   
@@ -529,15 +465,15 @@ inputEl.addEventListener("input", (e) => {
   const value = e.target.value;
   const cursorPos = e.target.selectionStart;
   
-  // Check if user is typing @element
+  // Check if user is typing @something
   const beforeCursor = value.substring(0, cursorPos);
-  const atMatch = beforeCursor.match(/@element(\d*)$/);
+  const atMatch = beforeCursor.match(/@([a-zA-Z_][a-zA-Z0-9_]*)$/);
   
   if (atMatch) {
     // Show available elements in console for now (could be enhanced with a dropdown)
     const availableElements = elementPickerController.getAllElements();
     if (availableElements.length > 0) {
-      console.log("Available elements:", availableElements.map(el => `@${el.id} (${el.name})`));
+      console.log("Available elements:", availableElements.map(el => `@${el.displayName} (${el.name})`));
     }
   }
 });

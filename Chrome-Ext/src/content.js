@@ -2,23 +2,25 @@
 
 let lastSelection = "";
 let picker = null;
+let elementManager = null;
 
-// Initialize picker when DOM is ready
+// Initialize picker and element manager when DOM is ready
 function initializePicker() {
-  if (window.ElementPicker && !picker) {
-    picker = new window.ElementPicker();
-    console.log("Element picker initialized successfully");
-  } else if (!window.ElementPicker) {
-    console.log("ElementPicker not available yet");
+  if (window.ElementPicker && window.ElementManager && !picker) {
+    elementManager = new window.ElementManager();
+    picker = new window.ElementPicker(elementManager);
+    console.log("Element picker and manager initialized successfully");
+  } else if (!window.ElementPicker || !window.ElementManager) {
+    console.log("ElementPicker or ElementManager not available yet");
   }
 }
 
-// Wait for ElementPicker to be available
+// Wait for ElementPicker and ElementManager to be available
 function waitForElementPicker() {
-  if (window.ElementPicker) {
+  if (window.ElementPicker && window.ElementManager) {
     initializePicker();
   } else {
-    console.log("Waiting for ElementPicker...");
+    console.log("Waiting for ElementPicker and ElementManager...");
     setTimeout(waitForElementPicker, 50);
   }
 }

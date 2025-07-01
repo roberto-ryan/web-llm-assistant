@@ -1,9 +1,239 @@
+// Element Management Service
+class ElementManager {
+    constructor() {
+        this.elementStore = new Map(); // Store elements by ID
+        this.elementCounter = 1;
+        this.storageKey = 'web_llm_elements';
+        this.loadStoredElements();
+    }
+    
+    // Load elements from Chrome storage
+    async loadStoredElements() {
+        try {
+            const result = await chrome.storage.local.get([this.storageKey]);
+            if (result[this.storageKey]) {
+                const stored = result[this.storageKey];
+                this.elementStore = new Map(stored.elements || []);
+                this.elementCounter = stored.counter || 1;
+                console.log(`Loaded ${this.elementStore.size} stored elements`);
+            }
+        } catch (error) {
+            console.error('Error loading stored elements:', error);
+        }
+    }
+    
+    // Save elements to Chrome storage
+    async saveElements() {
+        try {
+            const dataToStore = {
+                elements: Array.from(this.elementStore.entries()),
+                counter: this.elementCounter,
+                timestamp: Date.now()
+            };
+            
+            await chrome.storage.local.set({
+                [this.storageKey]: dataToStore
+            });
+            
+            console.log('Elements saved to storage');
+        } catch (error) {
+            console.error('Error saving elements:', error);
+        }
+    }
+    
+    // Clear all stored elements
+    async clearStoredElements() {
+        try {
+            this.elementStore.clear();
+            this.elementCounter = 1;
+            await chrome.storage.local.remove([this.storageKey]);
+            console.log('All stored elements cleared');
+            return true;
+        } catch (error) {
+            console.error('Error clearing elements:', error);
+            return false;
+        }
+    }
+    
+    // Add a new element
+    async addElement(data) {
+        const elementId = `element${this.elementCounter}`;
+        this.elementCounter++;
+        
+        const elementData = {
+            ...data,
+            customName: null,
+            defaultId: elementId
+        };
+        
+        this.elementStore.set(elementId, elementData);
+        await this.saveElements();
+        
+        return { id: elementId, data: elementData };
+    }
+    
+    // Rename an element
+    async renameElement(currentName, newName) {
+        // Validate new name (alphanumeric, no spaces, no special chars except underscore)
+        if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(newName)) {
+            throw new Error("Invalid name. Use only letters, numbers, and underscores. Must start with a letter.");
+        }
+        
+        // Check if new name is already in use
+        const existingElement = this.findElementByName(newName);
+        if (existingElement && existingElement !== currentName) {
+            throw new Error(`Name "@${newName}" is already in use.`);
+        }
+        
+        // Find the element
+        const elementData = this.elementStore.get(currentName);
+        if (!elementData) {
+            throw new Error(`Element "@${currentName}" not found.`);
+        }
+        
+        // If renaming to a custom name
+        if (newName !== elementData.defaultId) {
+            // Remove old entry and add with new name
+            this.elementStore.delete(currentName);
+            elementData.customName = newName;
+            this.elementStore.set(newName, elementData);
+        } else {
+            // Reverting to default name
+            elementData.customName = null;
+            if (currentName !== elementData.defaultId) {
+                this.elementStore.delete(currentName);
+                this.elementStore.set(elementData.defaultId, elementData);
+            }
+        }
+        
+        // Save to persistent storage
+        await this.saveElements();
+        return true;
+    }
+    
+    // Find element by custom name or default ID
+    findElementByName(name) {
+        for (const [key, data] of this.elementStore.entries()) {
+            if (key === name || data.customName === name) {
+                return key;
+            }
+        }
+        return null;
+    }
+    
+    // Get current name of an element (custom or default)
+    getCurrentName(elementKey) {
+        const data = this.elementStore.get(elementKey);
+        return data?.customName || elementKey;
+    }
+    
+    // Get element data by reference (e.g., "element1")
+    getElementData(elementRef) {
+        return this.elementStore.get(elementRef);
+    }
+    
+    // Get all stored elements
+    getAllElements() {
+        return Array.from(this.elementStore.entries()).map(([id, data]) => ({
+            id,
+            displayName: data.customName || id,
+            data,
+            name: data.id ? `#${data.id}` : 
+                  data.className ? `.${data.className.split(' ')[0]}` : 
+                  `<${data.tagName}>`
+        }));
+    }
+    
+    // Process message to replace element references with actual data
+    processElementReferences(message) {
+        // Support both @elementN and custom names like @login
+        const elementPattern = /@([a-zA-Z_][a-zA-Z0-9_]*)/g;
+        let processedMessage = message;
+        let foundElements = [];
+        
+        message.replace(elementPattern, (match, elementRef) => {
+            // Try to find element by name (could be custom name or default ID)
+            let elementData = this.getElementData(elementRef);
+            
+            // If not found by direct key, search by custom name
+            if (!elementData) {
+                const actualKey = this.findElementByName(elementRef);
+                if (actualKey) {
+                    elementData = this.getElementData(actualKey);
+                }
+            }
+            
+            if (elementData) {
+                foundElements.push({ id: elementRef, data: elementData });
+            }
+            return match;
+        });
+        
+        // If we found element references, append their detailed info
+        if (foundElements.length > 0) {
+            processedMessage += '\n\n--- Referenced Elements ---\n';
+            foundElements.forEach(({ id, data }) => {
+                processedMessage += `\n@${id}:\n${this.formatElementInfo(data)}\n`;
+            });
+        }
+        
+        return processedMessage;
+    }
+    
+    formatElementInfo(data) {
+        // Helper function to escape HTML
+        const escapeHtml = (unsafe) => {
+            return unsafe
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        };
+        
+        const styles = Object.entries(data.styles || {})
+            .filter(([key, value]) => value && value !== 'none' && value !== 'auto' && value !== '')
+            .map(([key, value]) => `  ${key}: ${value}`)
+            .join('\n');
+            
+        return `Element: ${data.selector}
+Tag: <${data.tagName}>
+${data.id ? `ID: ${data.id}` : ''}
+${data.className ? `Classes: ${data.className}` : ''}
+${data.position ? `Position: ${data.position.x}px, ${data.position.y}px (${data.position.width}x${data.position.height})` : ''}
+
+HTML:
+\`\`\`html
+${data.html}
+\`\`\`
+
+${data.text ? `Text Content: "${data.text}"` : ''}
+
+Key Styles:
+\`\`\`css
+${styles}
+\`\`\``;
+    }
+    
+    formatElementSummary(data, elementId) {
+        const elementName = data.id ? `#${data.id}` : 
+                           data.className ? `.${data.className.split(' ')[0]}` : 
+                           `<${data.tagName}>`;
+        
+        const text = data.text ? ` - "${data.text.slice(0, 50)}${data.text.length > 50 ? '...' : ''}"` : '';
+        const displayName = data.customName || elementId;
+        
+        return `🎯 **@${displayName}** saved: ${elementName}${text} (Type "rename @${displayName} newname" to rename)`;
+    }
+}
+
 // Simple and reliable Element Picker
 class ElementPicker {
-    constructor() {
+    constructor(elementManager) {
         this.isActive = false;
         this.overlay = null;
         this.highlightBox = null;
+        this.elementManager = elementManager;
         this.onMouseMove = this.onMouseMove.bind(this);
         this.onClick = this.onClick.bind(this);
         this.onKeyDown = this.onKeyDown.bind(this);
@@ -146,7 +376,7 @@ class ElementPicker {
         const data = this.extractElementData(element);
         this.stop();
         
-        // Send to extension
+        // Send to extension with element data
         chrome.runtime.sendMessage({
             action: 'elementSelected',
             data: data
@@ -195,5 +425,6 @@ class ElementPicker {
     }
 }
 
-// Make ElementPicker available globally for content script
+// Make ElementPicker and ElementManager available globally for content script
 window.ElementPicker = ElementPicker;
+window.ElementManager = ElementManager;

@@ -236,17 +236,52 @@ export class MenuManager {
     
     listContainer.innerHTML = elements.map(el => `
       <div style="padding: 8px; margin: 4px 0; background: #333; border-radius: 4px; font-size: 12px;">
-        <strong>@${el.id}</strong> - ${el.name}
-        <br>
-        <span style="color: #999;">${el.data.text ? el.data.text.slice(0, 40) + '...' : 'No text'}</span>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <strong>@${el.displayName}</strong> - ${el.name}
+            <br>
+            <span style="color: #999;">${el.data.text ? el.data.text.slice(0, 30) + '...' : 'No text'}</span>
+          </div>
+          <button class="rename-element-btn" data-element="${el.id}" style="
+            background: #ff6b35; 
+            color: white; 
+            border: none; 
+            padding: 4px 8px; 
+            border-radius: 3px; 
+            cursor: pointer; 
+            font-size: 10px;
+          ">Rename</button>
+        </div>
       </div>
     `).join('');
+    
+    // Add event listeners for rename buttons
+    listContainer.querySelectorAll('.rename-element-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const elementId = e.target.getAttribute('data-element');
+        this.handleRenameElement(elementId);
+      });
+    });
   }
 
   handleClearElements() {
     if (confirm('Are you sure you want to clear all stored elements? This cannot be undone.')) {
       window.elementPickerController?.clearStoredElements();
       this.refreshElementsList();
+    }
+  }
+
+  handleRenameElement(elementId) {
+    const element = window.elementPickerController?.getElementData(elementId);
+    if (!element) return;
+    
+    const currentName = element.customName || elementId;
+    const newName = prompt(`Rename "@${currentName}" to:`, currentName);
+    
+    if (newName && newName !== currentName) {
+      window.elementPickerController?.renameElement(currentName, newName).then(() => {
+        this.refreshElementsList();
+      });
     }
   }
 }
