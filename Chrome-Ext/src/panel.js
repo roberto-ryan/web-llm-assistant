@@ -16,6 +16,8 @@ const menuManager = new MenuManager(inputEl);
 // Element Picker Controller
 class ElementPickerController {
     constructor() {
+        this.elementStore = new Map(); // Store elements by ID
+        this.elementCounter = 1;
         this.setupEventListeners();
     }
     
@@ -71,18 +73,88 @@ class ElementPickerController {
     }
     
     insertElement(data) {
-        const elementInfo = this.formatElementInfo(data);
-        inputEl.value = `Analyze this element:\n\n${elementInfo}`;
-        inputEl.focus();
+        // Generate unique element ID
+        const elementId = `element${this.elementCounter}`;
+        this.elementCounter++;
         
-        // Auto-resize textarea
-        inputEl.style.height = 'auto';
-        inputEl.style.height = inputEl.scrollHeight + 'px';
+        // Store the element data
+        this.elementStore.set(elementId, data);
+        
+        // Show a clean summary message in the chat
+        const elementSummary = this.formatElementSummary(data, elementId);
+        addMessage(elementSummary, "system");
+        
+        // Add element reference to input if it's empty, otherwise just show the notification
+        if (!inputEl.value.trim()) {
+            inputEl.value = `Analyze @${elementId}`;
+            inputEl.focus();
+        }
+    }
+    
+    formatElementSummary(data, elementId) {
+        const elementName = data.id ? `#${data.id}` : 
+                           data.className ? `.${data.className.split(' ')[0]}` : 
+                           `<${data.tagName}>`;
+        
+        const text = data.text ? ` - "${data.text.slice(0, 50)}${data.text.length > 50 ? '...' : ''}"` : '';
+        
+        return `🎯 **@${elementId}** saved: ${elementName}${text}`;
+    }
+    
+    // Get element data by reference (e.g., "element1")
+    getElementData(elementRef) {
+        return this.elementStore.get(elementRef);
+    }
+    
+    // Get all stored elements
+    getAllElements() {
+        return Array.from(this.elementStore.entries()).map(([id, data]) => ({
+            id,
+            data,
+            name: data.id ? `#${data.id}` : 
+                  data.className ? `.${data.className.split(' ')[0]}` : 
+                  `<${data.tagName}>`
+        }));
+    }
+    
+    // Process message to replace element references with actual data
+    processElementReferences(message) {
+        const elementPattern = /@(element\d+)/g;
+        let processedMessage = message;
+        let foundElements = [];
+        
+        message.replace(elementPattern, (match, elementId) => {
+            const elementData = this.getElementData(elementId);
+            if (elementData) {
+                foundElements.push({ id: elementId, data: elementData });
+            }
+            return match;
+        });
+        
+        // If we found element references, append their detailed info
+        if (foundElements.length > 0) {
+            processedMessage += '\n\n--- Referenced Elements ---\n';
+            foundElements.forEach(({ id, data }) => {
+                processedMessage += `\n@${id}:\n${this.formatElementInfo(data)}\n`;
+            });
+        }
+        
+        return processedMessage;
     }
     
     formatElementInfo(data) {
-        const styles = Object.entries(data.styles)
-            .filter(([key, value]) => value && value !== 'none' && value !== 'auto')
+        // Helper function to escape HTML
+        const escapeHtml = (unsafe) => {
+            return unsafe
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        };
+        
+        const styles = Object.entries(data.styles || {})
+            .filter(([key, value]) => value && value !== 'none' && value !== 'auto' && value !== '')
             .map(([key, value]) => `  ${key}: ${value}`)
             .join('\n');
             
@@ -90,13 +162,14 @@ class ElementPickerController {
 Tag: <${data.tagName}>
 ${data.id ? `ID: ${data.id}` : ''}
 ${data.className ? `Classes: ${data.className}` : ''}
+${data.position ? `Position: ${data.position.x}px, ${data.position.y}px (${data.position.width}x${data.position.height})` : ''}
 
 HTML:
 \`\`\`html
 ${data.html}
 \`\`\`
 
-${data.text ? `Text: "${data.text}"` : ''}
+${data.text ? `Text Content: "${data.text}"` : ''}
 
 Key Styles:
 \`\`\`css
@@ -291,6 +364,9 @@ async function handleSend() {
   inputEl.value = "";
   sendBtn.disabled = true;
   
+  // Process element references in the query
+  const processedQuery = elementPickerController.processElementReferences(query);
+  
   addMessage(query, "user");
   
   // Get page context if available
@@ -302,12 +378,13 @@ async function handleSend() {
     content: `You are a helpful AI assistant running in the user's browser. 
 ${context ? `Current page: ${context.title} (${context.url})
 ${context.selection ? `Selected text: "${context.selection}"` : `Page preview: ${context.visibleText}`}` : ''}
+When users reference @element1, @element2, etc., these refer to specific web elements they've selected. The detailed element information will be included in their message.
 Provide helpful, concise responses.`
   };
   
   // Prepare messages (keep last 10 for context)
   const recentMessages = messages.slice(-10);
-  const apiMessages = [systemMessage, ...recentMessages, { role: "user", content: query }];
+  const apiMessages = [systemMessage, ...recentMessages, { role: "user", content: processedQuery }];
   
   try {
     statusEl.textContent = "Thinking...";
@@ -335,7 +412,7 @@ Provide helpful, concise responses.`
       response = await callWebLLM(apiMessages);
     }
     
-    messages.push({ role: "user", content: query });
+    messages.push({ role: "user", content: processedQuery });
     messages.push({ role: "assistant", content: response });
     
     // Update global reference for export functionality
@@ -361,6 +438,24 @@ inputEl.addEventListener("keydown", (e) => {
   if (e.key === "Enter" && !e.shiftKey) {
     e.preventDefault();
     handleSend();
+  }
+});
+
+// Add simple autocomplete for element references
+inputEl.addEventListener("input", (e) => {
+  const value = e.target.value;
+  const cursorPos = e.target.selectionStart;
+  
+  // Check if user is typing @element
+  const beforeCursor = value.substring(0, cursorPos);
+  const atMatch = beforeCursor.match(/@element(\d*)$/);
+  
+  if (atMatch) {
+    // Show available elements in console for now (could be enhanced with a dropdown)
+    const availableElements = elementPickerController.getAllElements();
+    if (availableElements.length > 0) {
+      console.log("Available elements:", availableElements.map(el => `@${el.id} (${el.name})`));
+    }
   }
 });
 
