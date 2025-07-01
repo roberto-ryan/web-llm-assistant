@@ -406,8 +406,8 @@ async function handleSend() {
   if (!query) return;
   
   // Check if user wants to execute JavaScript
-  if (query.startsWith('/js ')) {
-    const jsPrompt = query.replace('/js ', '');
+  if (query.startsWith('/x ')) {
+    const jsPrompt = query.replace('/x ', '');
     addMessage(query, "user");
     
     try {
