@@ -77,10 +77,28 @@ class ElementPickerController {
     setupEventListeners() {
         elementPickerBtn?.addEventListener('click', () => this.togglePicker());
         
+        let lastElementData = null;
+        let lastElementTime = 0;
+        
         chrome.runtime.onMessage.addListener((msg) => {
             if (msg.action === 'elementSelected') {
-                this.insertElement(msg.data);
-                this.setPickerActive(false);
+                console.log('Panel received elementSelected message:', msg);
+                
+                // Prevent duplicate element processing within 1 second
+                const now = Date.now();
+                const isDuplicate = lastElementData && 
+                    JSON.stringify(lastElementData) === JSON.stringify(msg.data) &&
+                    (now - lastElementTime) < 1000;
+                
+                if (!isDuplicate) {
+                    console.log('Processing new element (not a duplicate)');
+                    lastElementData = msg.data;
+                    lastElementTime = now;
+                    this.insertElement(msg.data);
+                    this.setPickerActive(false);
+                } else {
+                    console.log('Skipping duplicate element selection');
+                }
             }
         });
     }

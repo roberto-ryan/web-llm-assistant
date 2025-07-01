@@ -80,6 +80,7 @@ class ElementManager {
     
     // Add a new element
     async addElement(data) {
+        console.log('ElementManager.addElement called, current counter:', this.elementCounter);
         const elementId = `element${this.elementCounter}`;
         this.elementCounter++;
         
@@ -92,6 +93,7 @@ class ElementManager {
         this.elementStore.set(elementId, elementData);
         await this.saveElements();
         
+        console.log('Element added with ID:', elementId, 'new counter:', this.elementCounter);
         return { id: elementId, data: elementData };
     }
     
