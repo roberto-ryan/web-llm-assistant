@@ -2,6 +2,7 @@
 import showdown from "showdown";
 import { ServiceWorkerMLCEngine } from "@mlc-ai/web-llm";
 import { MenuManager } from "./menu-template.js";
+import { JSExecutor } from "./js-executor.js";
 
 const messagesDiv = document.getElementById("messages");
 const inputEl = document.getElementById("input");
@@ -218,6 +219,9 @@ let apiKey = "";
 let webllmEngine = null;
 let webllmModel = "";
 
+// Add JS executor
+let jsExecutor = null;
+
 // Make messages accessible globally for export functionality
 window.messages = messages;
 
@@ -247,6 +251,9 @@ async function loadSettings() {
   
   // Initialize menu after settings are loaded
   menuManager.init();
+  
+  // Initialize JS executor with your existing AI functions
+  jsExecutor = new JSExecutor(callExternalAPI, callWebLLM);
 }
 
 // Initialize WebLLM
@@ -397,6 +404,28 @@ function handleNewChat() {
 async function handleSend() {
   const query = inputEl.value.trim();
   if (!query) return;
+  
+  // Check if user wants to execute JavaScript
+  if (query.startsWith('/js ')) {
+    const jsPrompt = query.replace('/js ', '');
+    addMessage(query, "user");
+    
+    try {
+      addMessage("Generating code...", "system");
+      const { code, result } = await jsExecutor.execute(jsPrompt);
+      
+      if (result.success) {
+        addMessage(`✅ ${result.message}\n\nCode:\n\`\`\`javascript\n${code}\n\`\`\``, "assistant");
+      } else {
+        addMessage(`❌ ${result.error}\n\nCode:\n\`\`\`javascript\n${code}\n\`\`\``, "error");
+      }
+    } catch (error) {
+      addMessage(`Error: ${error.message}`, "error");
+    }
+    
+    inputEl.value = "";
+    return; // Don't process as regular chat
+  }
   
   inputEl.value = "";
   sendBtn.disabled = true;
