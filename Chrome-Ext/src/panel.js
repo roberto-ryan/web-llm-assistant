@@ -158,7 +158,7 @@ class ElementPickerController {
         
         // If input is empty, add "Analyze @elementN", otherwise append " @elementN" to existing text
         if (!currentValue.trim()) {
-            inputEl.value = `Analyze ${elementRef}`;
+            inputEl.value = `rename ${elementRef} `;
         } else {
             // Add a space before the element reference if the input doesn't end with whitespace
             const separator = currentValue.endsWith(' ') ? '' : ' ';
