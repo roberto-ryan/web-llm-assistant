@@ -337,9 +337,24 @@ function enableInput() {
 function addMessage(content, role) {
   const messageEl = document.createElement("div");
   messageEl.className = `message ${role}`;
-  messageEl.innerHTML = role === "assistant" 
-    ? markdownConverter.makeHtml(content) 
-    : content;
+  
+  if (role === "assistant") {
+    messageEl.innerHTML = markdownConverter.makeHtml(content);
+  } else if (role === "user") {
+    // For user messages, preserve newlines by converting them to <br> tags
+    // and escape HTML to prevent XSS
+    const escapedContent = content
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;')
+      .replace(/\n/g, '<br>');
+    messageEl.innerHTML = escapedContent;
+  } else {
+    messageEl.innerHTML = content;
+  }
+  
   messagesDiv.appendChild(messageEl);
   messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
