@@ -24,6 +24,9 @@ let apiKey = "";
 let webllmEngine = null;
 let webllmModel = "";
 
+// Make messages accessible globally for export functionality
+window.messages = messages;
+
 // Load settings
 async function loadSettings() {
   const settings = await chrome.storage.sync.get({
@@ -171,6 +174,9 @@ function handleNewChat() {
   // Clear messages array
   messages = [];
   
+  // Update global reference for export functionality
+  window.messages = messages;
+  
   // Clear messages from UI
   messagesDiv.innerHTML = "";
   
@@ -235,6 +241,9 @@ Provide helpful, concise responses.`
     
     messages.push({ role: "user", content: query });
     messages.push({ role: "assistant", content: response });
+    
+    // Update global reference for export functionality
+    window.messages = messages;
     
     addMessage(response, "assistant");
     statusEl.textContent = usedFallback ? "WebLLM (fallback)" : (useExternalAPI ? "External API" : "WebLLM");

@@ -86,6 +86,15 @@ export class MenuManager {
       }
     });
 
+    // Handle export clicks
+    document.addEventListener("click", (e) => {
+      if (e.target.textContent === "Export as JSON") {
+        this.exportAsJSON();
+      } else if (e.target.textContent === "Export as Markdown") {
+        this.exportAsMarkdown();
+      }
+    });
+
     // Close menu with Escape key
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape" && this.slideMenu?.classList.contains("active")) {
@@ -154,5 +163,36 @@ export class MenuManager {
       this.inputEl.focus();
       this.closeMenu();
     }
+  }
+
+  // Export chat functionality
+  exportAsJSON() {
+    const messages = window.messages || [];
+    if (!messages.length) return alert("No conversation to export!");
+    
+    const data = { timestamp: new Date().toISOString(), messages };
+    this.download(JSON.stringify(data, null, 2), 'json');
+    this.closeMenu();
+  }
+
+  exportAsMarkdown() {
+    const messages = window.messages || [];
+    if (!messages.length) return alert("No conversation to export!");
+    
+    let md = `# Chat Export\n\n`;
+    messages.forEach(msg => {
+      const role = msg.role === "user" ? "👤 User" : "🤖 Assistant";
+      md += `## ${role}\n\n${msg.content}\n\n---\n\n`;
+    });
+    
+    this.download(md, 'md');
+    this.closeMenu();
+  }
+
+  download(content, ext) {
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(new Blob([content]));
+    link.download = `chat-${Date.now()}.${ext}`;
+    link.click();
   }
 }
