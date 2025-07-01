@@ -1,5 +1,5 @@
 // Background script with WebLLM support
-import { ExtensionServiceWorkerMLCEngineHandler } from "@mlc-ai/web-llm";
+import { ServiceWorkerMLCEngineHandler } from "@mlc-ai/web-llm";
 
 let webllmHandler = null;
 
@@ -9,7 +9,7 @@ chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
 chrome.runtime.onConnect.addListener(function (port) {
   if (port.name === "webllm") {
     if (!webllmHandler) {
-      webllmHandler = new ExtensionServiceWorkerMLCEngineHandler(port);
+      webllmHandler = new ServiceWorkerMLCEngineHandler(port);
     } else {
       webllmHandler.setPort(port);
     }

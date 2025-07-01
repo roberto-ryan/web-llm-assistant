@@ -1,6 +1,6 @@
 // Panel script with external API primary, WebLLM fallback
 import showdown from "showdown";
-import { ExtensionServiceWorkerMLCEngine } from "@mlc-ai/web-llm";
+import { ServiceWorkerMLCEngine } from "@mlc-ai/web-llm";
 
 const messagesDiv = document.getElementById("messages");
 const inputEl = document.getElementById("input");
@@ -51,17 +51,20 @@ async function initWebLLM(model, isBackground = false) {
       statusEl.textContent = "Initializing WebLLM...";
     }
     
-    webllmEngine = new ExtensionServiceWorkerMLCEngine();
-    const port = chrome.runtime.connect({ name: "webllm" });
-    
-    await webllmEngine.reload(model, {
-      context_window_size: 4096,
-      temperature: 0.7,
+    webllmEngine = new ServiceWorkerMLCEngine({
       initProgressCallback: (progress) => {
         if (!isBackground) {
           statusEl.textContent = `Loading model: ${Math.round(progress.progress * 100)}%`;
         }
       }
+    });
+    
+    // Connect to background script
+    const port = chrome.runtime.connect({ name: "webllm" });
+    
+    await webllmEngine.reload(model, {
+      context_window_size: 4096,
+      temperature: 0.7
     });
     
     if (!isBackground) {
@@ -102,12 +105,12 @@ async function getPageContext() {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (tab.id) {
       const response = await chrome.tabs.sendMessage(tab.id, { action: "get_page_context" });
-      if (response.status === "success") {
+      if (response && response.status === "success") {
         return response.data;
       }
     }
   } catch (error) {
-    console.error("Failed to get page context:", error);
+    console.warn("Could not get page context (content script may not be loaded):", error.message);
   }
   return null;
 }
