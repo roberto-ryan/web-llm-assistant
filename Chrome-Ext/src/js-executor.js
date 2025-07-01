@@ -15,11 +15,26 @@ export class JSExecutor {
   async generateCode(prompt) {
     const messages = [
       {
-        role: "system",
-        content: `Generate JavaScript code for web automation. Rules:
-- Write only executable code, no explanations
+      role: "system",
+      content: `Generate JavaScript code that runs in a web browser. Follow these rules:
+
+## Environment:
+- This is a WEB BROWSER environment, NOT Node.js
+- You have access to standard web APIs: DOM, fetch, window, document, etc.
+- Do NOT use Node.js modules like 'require', 'child_process', 'fs', etc.
+
+## Core Requirements:
+- Write only executable code, no explanations or comments
 - Don't use try-catch blocks (they're added automatically)
-- Always end with: return {success: true, message: "what happened"}`
+- Code runs in an async function context, so you can use await
+
+## Approach:
+- For navigation: Use window.location or window.open()
+- For DOM manipulation: Use document.querySelector, etc.
+- For HTTP requests: Use fetch()
+- Only suggest complex automation (Puppeteer) if specifically requested
+
+NEVER use Node.js APIs like require(), exec(), fs, child_process, etc.`
       },
       { role: "user", content: prompt }
     ];
@@ -41,50 +56,23 @@ export class JSExecutor {
   }
 
   /**
-   * Execute JavaScript code on active tab (exact WebGNE implementation)
+   * Execute JavaScript code via background script (where Chrome APIs are available)
    */
   async runCode(code) {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    
     try {
-      // Primary method: Execute in MAIN world to bypass CSP (same as WebGNE)
-      const [{ result }] = await chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        world: 'MAIN',
-        func: (userCode) => {
-          try {
-            return Function(`"use strict"; ${userCode}`)();
-          } catch (e) {
-            return { success: false, error: e.toString() };
-          }
-        },
-        args: [code]
+      // Send code to background script for execution
+      const response = await chrome.runtime.sendMessage({
+        action: 'executeJS',
+        code: code
       });
       
-      return result || { success: true, message: 'Executed' };
-    } catch (e) {
-      // Fallback method: Inject as script tag (same as WebGNE)
-      const [{ result }] = await chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        func: (userCode) => {
-          const script = document.createElement('script');
-          const id = 'webgne_' + Date.now();
-          script.textContent = `
-            window['${id}'] = (() => {
-              try { ${userCode} }
-              catch(e) { return {success: false, error: e.toString()} }
-            })();
-          `;
-          document.head.appendChild(script);
-          script.remove();
-          const res = window[id];
-          delete window[id];
-          return res || { success: true };
-        },
-        args: [code]
-      });
-      
-      return result;
+      if (response.success) {
+        return response.result;
+      } else {
+        return { success: false, error: response.error };
+      }
+    } catch (error) {
+      return { success: false, error: error.toString() };
     }
   }
 
