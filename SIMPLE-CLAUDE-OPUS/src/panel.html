@@ -38,6 +38,14 @@
       background: #4a2a2a;
       color: #ff9999;
     }
+    .system {
+      background: #2a2a3a;
+      color: #b0b0b0;
+      font-style: italic;
+      text-align: center;
+      max-width: 60%;
+      margin: 10px auto;
+    }
     #input-area {
       display: flex;
       gap: 10px;
@@ -69,10 +77,28 @@
       color: #999;
       text-align: center;
     }
+    #header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      padding: 5px 0;
+    }
+    #new-chat-btn {
+      padding: 8px 16px;
+      background: #4a3a5a;
+      font-size: 12px;
+    }
+    #new-chat-btn:hover:not(:disabled) {
+      background: #5a4a6a;
+    }
   </style>
 </head>
 <body>
-  <div id="status">Connecting to AI...</div>
+  <div id="header">
+    <div id="status">Connecting to AI...</div>
+    <button id="new-chat-btn">New Chat</button>
+  </div>
   <div id="messages"></div>
   <div id="input-area">
     <textarea id="input" placeholder="Ask anything..." rows="2"></textarea>

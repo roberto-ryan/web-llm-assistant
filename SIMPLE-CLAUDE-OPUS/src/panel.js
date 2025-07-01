@@ -5,6 +5,7 @@ import { ServiceWorkerMLCEngine } from "@mlc-ai/web-llm";
 const messagesDiv = document.getElementById("messages");
 const inputEl = document.getElementById("input");
 const sendBtn = document.getElementById("send");
+const newChatBtn = document.getElementById("new-chat-btn");
 const statusEl = document.getElementById("status");
 
 const markdownConverter = new showdown.Converter({
@@ -152,6 +153,21 @@ async function callWebLLM(messages) {
   return completion.choices[0].message.content;
 }
 
+// Handle new chat
+function handleNewChat() {
+  // Clear messages array
+  messages = [];
+  
+  // Clear messages from UI
+  messagesDiv.innerHTML = "";
+  
+  // Focus input
+  inputEl.focus();
+  
+  // Optional: Show a welcome message
+  addMessage("Chat cleared. How can I help you?", "system");
+}
+
 // Handle message sending
 async function handleSend() {
   const query = inputEl.value.trim();
@@ -222,6 +238,7 @@ Provide helpful, concise responses.`
 
 // Event listeners
 sendBtn.addEventListener("click", handleSend);
+newChatBtn.addEventListener("click", handleNewChat);
 inputEl.addEventListener("keydown", (e) => {
   if (e.key === "Enter" && !e.shiftKey) {
     e.preventDefault();
