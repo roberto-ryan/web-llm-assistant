@@ -22,7 +22,7 @@ export class JSExecutor {
    * Now supports element context from the element picker and page context
    */
   async generateCode(prompt, options = {}) {
-    const { includeElementContext = true, availableElements = null, pageContext = null } = options;
+    const { includeElementContext = true, availableElements = null, pageContext = null, validateCode = false } = options;
     
     let enhancedPrompt = prompt;
     let elementContext = '';
@@ -107,7 +107,14 @@ IF YOU DEFINE A FUNCTION, MAKE SURE TO ACTUALLY CALL IT AT THE END OF YOUR CODE!
     const match = code.match(/```(?:js|javascript)?\n?([\s\S]*?)```/);
     if (match) code = match[1];
     
-    return code.trim();
+    code = code.trim();
+    
+    // Optional validation step to ensure code is executable
+    if (validateCode) {
+      code = await this.validateAndFixCode(code, prompt);
+    }
+    
+    return code;
   }
 
   /**
@@ -151,9 +158,12 @@ IF YOU DEFINE A FUNCTION, MAKE SURE TO ACTUALLY CALL IT AT THE END OF YOUR CODE!
   /**
    * Generate and execute in one call
    * Now supports element context and page context
+   * Includes validation by default to ensure executable code
    */
   async execute(prompt, options = {}) {
-    const code = await this.generateCode(prompt, options);
+    // Enable validation by default for execution
+    const executeOptions = { validateCode: true, ...options };
+    const code = await this.generateCode(prompt, executeOptions);
     const result = await this.runCode(code);
     return { code, result };
   }
@@ -173,5 +183,65 @@ IF YOU DEFINE A FUNCTION, MAKE SURE TO ACTUALLY CALL IT AT THE END OF YOUR CODE!
     
     const prompt = `${action} the element @${elementId}. ${additionalContext}`.trim();
     return this.generateCode(prompt, { includeElementContext: true, pageContext });
+  }
+
+  /**
+   * Validate generated code and fix execution issues
+   * Checks if the code is ready to execute and fixes common issues like uncalled functions
+   */
+  async validateAndFixCode(code, originalPrompt) {
+    const validationMessages = [
+      {
+        role: "system",
+        content: `You are a JavaScript code validator. Analyze the provided code and determine if it's ready to execute in the browser console.
+
+## Your Task:
+1. Check if the code will actually execute when run (not just define functions)
+2. If functions are defined but not called, add the minimal code to call them
+3. If the code is already executable, return it unchanged
+4. Only make minimal changes needed for execution
+
+## Rules:
+- Output ONLY the executable JavaScript code, no explanations
+- Don't add try-catch blocks
+- Don't add comments or explanations
+- If a function is defined but not called, call it at the end
+- If the code is already executable, don't change it
+- Keep all original functionality intact`
+      },
+      {
+        role: "user",
+        content: `Original request: "${originalPrompt}"
+
+Generated code to validate:
+\`\`\`javascript
+${code}
+\`\`\`
+
+Is this code ready to execute? If not, fix it with minimal changes to make it executable.`
+      }
+    ];
+
+    let response;
+    try {
+      response = await this.callExternalAPI(validationMessages);
+    } catch (error) {
+      response = await this.callWebLLM(validationMessages);
+    }
+
+    // Extract code from markdown if present
+    let validatedCode = response;
+    const match = validatedCode.match(/```(?:js|javascript)?\n?([\s\S]*?)```/);
+    if (match) validatedCode = match[1];
+    
+    return validatedCode.trim();
+  }
+
+  /**
+   * Generate validated JavaScript code that's guaranteed to be executable
+   * Convenience method that always includes validation
+   */
+  async generateExecutableCode(prompt, options = {}) {
+    return this.generateCode(prompt, { ...options, validateCode: true });
   }
 }
