@@ -85,7 +85,7 @@ To interact with these elements, use standard DOM methods:
 - For HTTP requests: Use fetch()
 - When interacting with stored elements, use their specific selectors for reliability
 - Use the page context above to understand the current page and make contextually relevant code
-- Only suggest complex automation (Puppeteer) if specifically requested
+- NEVER use Import Scripts or external libraries!
 
 NEVER use Node.js APIs like require(), exec(), fs, child_process, etc.`
       },
