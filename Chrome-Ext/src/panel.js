@@ -357,6 +357,27 @@ function addMessage(content, role) {
   
   messagesDiv.appendChild(messageEl);
   messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  return messageEl;
+}
+
+// Create a streaming message element that can be updated
+function createStreamingMessage(role) {
+  const messageEl = document.createElement("div");
+  messageEl.className = `message ${role}`;
+  messageEl.innerHTML = ""; // Start empty
+  messagesDiv.appendChild(messageEl);
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  return messageEl;
+}
+
+// Update streaming message content
+function updateStreamingMessage(messageEl, content, role) {
+  if (role === "assistant") {
+    messageEl.innerHTML = markdownConverter.makeHtml(content);
+  } else {
+    messageEl.innerHTML = content;
+  }
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
 
 // Get page context
@@ -381,8 +402,8 @@ async function getPageContext() {
   return null;
 }
 
-// Call external API
-async function callExternalAPI(messages) {
+// Call external API with streaming support
+async function callExternalAPI(messages, onChunk = null) {
   const response = await fetch(apiEndpoint, {
     method: "POST",
     headers: {
@@ -391,7 +412,7 @@ async function callExternalAPI(messages) {
     },
     body: JSON.stringify({
       messages: messages,
-      stream: false
+      stream: !!onChunk // Enable streaming only if onChunk callback is provided
     })
   });
   
@@ -399,23 +420,87 @@ async function callExternalAPI(messages) {
     throw new Error(`API error: ${response.status}`);
   }
   
-  const data = await response.json();
-  return data.choices[0].message.content;
+  if (onChunk && response.body) {
+    // Handle streaming response
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let fullContent = "";
+    
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n');
+        
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const dataStr = line.slice(6).trim();
+            if (dataStr === '[DONE]') continue;
+            
+            try {
+              const data = JSON.parse(dataStr);
+              const content = data.choices?.[0]?.delta?.content;
+              if (content) {
+                fullContent += content;
+                onChunk(content, fullContent);
+              }
+            } catch (e) {
+              // Skip malformed JSON chunks
+              console.warn('Skipping malformed chunk:', dataStr);
+            }
+          }
+        }
+      }
+    } finally {
+      reader.releaseLock();
+    }
+    
+    return fullContent;
+  } else {
+    // Handle non-streaming response
+    const data = await response.json();
+    return data.choices[0].message.content;
+  }
 }
 
-// Call WebLLM
-async function callWebLLM(messages) {
+// Call WebLLM with streaming support
+async function callWebLLM(messages, onChunk = null) {
   if (!webllmEngine) {
     throw new Error("WebLLM not initialized");
   }
   
-  const completion = await webllmEngine.chat.completions.create({
-    messages: messages,
-    temperature: 0.7,
-    max_tokens: 1000
-  });
-  
-  return completion.choices[0].message.content;
+  if (onChunk) {
+    // Handle streaming response
+    let fullContent = "";
+    
+    const completion = await webllmEngine.chat.completions.create({
+      messages: messages,
+      temperature: 0.7,
+      max_tokens: 1000,
+      stream: true
+    });
+    
+    for await (const chunk of completion) {
+      const content = chunk.choices?.[0]?.delta?.content;
+      if (content) {
+        fullContent += content;
+        onChunk(content, fullContent);
+      }
+    }
+    
+    return fullContent;
+  } else {
+    // Handle non-streaming response
+    const completion = await webllmEngine.chat.completions.create({
+      messages: messages,
+      temperature: 0.7,
+      max_tokens: 1000
+    });
+    
+    return completion.choices[0].message.content;
+  }
 }
 
 // Handle new chat
@@ -518,14 +603,26 @@ Provide helpful, concise responses.`
   try {
     statusEl.textContent = "Thinking...";
     
-    let response;
+    let response = "";
     let usedFallback = false;
+    
+    // Create streaming message element
+    const streamingMessageEl = createStreamingMessage("assistant");
+    
+    // Define streaming callback
+    const onChunk = (chunk, fullContent) => {
+      updateStreamingMessage(streamingMessageEl, fullContent, "assistant");
+    };
     
     if (useExternalAPI && apiEndpoint) {
       try {
-        response = await callExternalAPI(apiMessages);
+        response = await callExternalAPI(apiMessages, onChunk);
       } catch (error) {
         console.error("External API failed:", error);
+        
+        // Remove the failed streaming message and show error briefly
+        streamingMessageEl.remove();
+        const errorMsg = addMessage("External API failed, falling back to WebLLM...", "system");
         
         // Try WebLLM fallback
         if (!webllmEngine) {
@@ -533,12 +630,21 @@ Provide helpful, concise responses.`
           await initWebLLM(webllmModel, false);
         }
         
-        response = await callWebLLM(apiMessages);
+        // Create new streaming message for fallback
+        const fallbackStreamingEl = createStreamingMessage("assistant");
+        const fallbackOnChunk = (chunk, fullContent) => {
+          updateStreamingMessage(fallbackStreamingEl, fullContent, "assistant");
+        };
+        
+        response = await callWebLLM(apiMessages, fallbackOnChunk);
         usedFallback = true;
+        
+        // Remove the error message after a delay
+        setTimeout(() => errorMsg.remove(), 2000);
       }
     } else {
       // Use WebLLM directly
-      response = await callWebLLM(apiMessages);
+      response = await callWebLLM(apiMessages, onChunk);
     }
     
     messages.push({ role: "user", content: processedQuery });
@@ -547,7 +653,6 @@ Provide helpful, concise responses.`
     // Update global reference for export functionality
     window.messages = messages;
     
-    addMessage(response, "assistant");
     statusEl.textContent = usedFallback ? "WebLLM (fallback)" : (useExternalAPI ? "External API" : "WebLLM");
     
   } catch (error) {
