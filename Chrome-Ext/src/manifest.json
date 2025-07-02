@@ -31,6 +31,20 @@
     "page": "options.html",
     "open_in_tab": false
   },
-  "permissions": ["storage", "tabs", "activeTab", "sidePanel", "scripting", "notifications", "bookmarks", "history", "downloads", "cookies", "contextMenus", "alarms"],
+  "permissions": [
+    "storage", 
+    "tabs", 
+    "activeTab", 
+    "sidePanel", 
+    "scripting", 
+    "notifications", 
+    "bookmarks", 
+    "history", 
+    "downloads", 
+    "cookies", 
+    "contextMenus", 
+    "alarms",
+    "debugger"
+  ],
   "host_permissions": ["<all_urls>"]
 }

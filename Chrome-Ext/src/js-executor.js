@@ -1,6 +1,6 @@
 /**
- * JavaScript Execution Module - Surgically extracted from WebGNE
- * Minimal module that adds JS execution capability to your existing extension
+ * JavaScript Execution Module with dual execution methods
+ * Supports both Content Script Injection and DevTools API
  */
 
 export class JSExecutor {
@@ -8,21 +8,19 @@ export class JSExecutor {
     this.callExternalAPI = callExternalAPI;
     this.callWebLLM = callWebLLM;
     this.elementManager = elementManager;
+    this.executionMethod = 'auto'; // 'auto', 'contentScript', 'devTools'
   }
 
-  /**
-   * Set the element manager for accessing stored elements
-   */
   setElementManager(elementManager) {
     this.elementManager = elementManager;
   }
 
-  /**
-   * Generate JavaScript code using your existing AI functions
-   * Now supports element context from the element picker and page context
-   */
+  setExecutionMethod(method) {
+    this.executionMethod = method;
+  }
+
   async generateCode(prompt, options = {}) {
-    const { includeElementContext = true, availableElements = null, pageContext = null, validateCode = false } = options;
+    const { includeElementContext = true, availableElements = null, pageContext = null } = options;
     
     let enhancedPrompt = prompt;
     let elementContext = '';
@@ -41,10 +39,8 @@ export class JSExecutor {
     
     // Add element context if available and requested
     if (includeElementContext && this.elementManager) {
-      // Process element references in the prompt (e.g., @element1, @loginButton)
       enhancedPrompt = this.elementManager.processElementReferences(prompt);
       
-      // If no specific elements referenced, add context about available elements
       if (!prompt.includes('@') && availableElements !== null) {
         const elements = availableElements || this.elementManager.getAllElements();
         if (elements.length > 0) {
@@ -55,8 +51,8 @@ export class JSExecutor {
 
     const messages = [
       {
-      role: "system",
-      content: `Generate JavaScript code that runs in a web browser. Follow these rules:
+        role: "system",
+        content: `Generate JavaScript code that runs in a web browser. Follow these rules:
 
 ## Environment:
 - This is a WEB BROWSER environment, NOT Node.js
@@ -67,8 +63,10 @@ ${pageContextInfo}
 
 ## Core Requirements:
 - Write only executable code, no explanations or comments
-- Don't use try-catch blocks (they're added automatically)
-- Code runs in an async function context, so you can use await
+- The code will be wrapped in an async function automatically
+- You can use 'return' to return values from your code
+- You can use await for async operations
+- Do NOT wrap code in try-catch (error handling is automatic)
 
 ## Element Context:
 ${elementContext ? `You have access to these stored page elements:
@@ -76,25 +74,22 @@ ${elementContext}
 
 To interact with these elements, use standard DOM methods:
 - document.querySelector('#elementId') or document.querySelector('.className')
-- element.click(), element.value, element.textContent, etc.
-- When possible, use the specific selectors provided above` : 'No stored elements are currently available'}
+- element.click(), element.value, element.textContent, etc.` : 'No stored elements are currently available'}
 
-## Approach:
-- For navigation: Use window.location or window.open()
-- For DOM manipulation: Use document.querySelector, etc.
-- For HTTP requests: Use fetch()
-- When interacting with stored elements, use their specific selectors for reliability
-- Use the page context above to understand the current page and make contextually relevant code
-- NEVER use Import Scripts or external libraries!
+## Important Guidelines:
+- For navigation: Use window.location.href = 'url' or window.open()
+- For DOM manipulation: Use document.querySelector, getElementById, etc.
+- For HTTP requests: Use fetch() with await
+- For delays: Use await new Promise(resolve => setTimeout(resolve, ms))
+- Return meaningful values when appropriate
+- NEVER import external scripts or libraries
 
-NEVER use Node.js APIs like require(), exec(), fs, child_process, etc.
-
-IF YOU DEFINE A FUNCTION, MAKE SURE TO ACTUALLY CALL IT AT THE END OF YOUR CODE!`
+IF YOU DEFINE A FUNCTION, MAKE SURE TO ACTUALLY CALL IT!`
       },
       { role: "user", content: enhancedPrompt }
     ];
 
-    // Try external API first, fallback to WebLLM (same as your existing pattern)
+    // Try external API first, fallback to WebLLM
     let response;
     try {
       response = await this.callExternalAPI(messages);
@@ -102,24 +97,14 @@ IF YOU DEFINE A FUNCTION, MAKE SURE TO ACTUALLY CALL IT AT THE END OF YOUR CODE!
       response = await this.callWebLLM(messages);
     }
 
-    // Extract code from markdown if present (same as WebGNE)
+    // Extract code from markdown if present
     let code = response;
     const match = code.match(/```(?:js|javascript)?\n?([\s\S]*?)```/);
     if (match) code = match[1];
     
-    code = code.trim();
-    
-    // Optional validation step to ensure code is executable
-    if (validateCode) {
-      code = await this.validateAndFixCode(code, prompt);
-    }
-    
-    return code;
+    return code.trim();
   }
 
-  /**
-   * Format available elements for the AI context
-   */
   _formatAvailableElements(elements) {
     if (!elements || elements.length === 0) return '';
     
@@ -134,15 +119,34 @@ IF YOU DEFINE A FUNCTION, MAKE SURE TO ACTUALLY CALL IT AT THE END OF YOUR CODE!
     }).join('\n');
   }
 
-  /**
-   * Execute JavaScript code via background script (where Chrome APIs are available)
-   */
-  async runCode(code) {
+  async runCode(code, options = {}) {
     try {
-      // Send code to background script for execution
+      // Check if we're on a strict CSP site and auto-prefer DevTools
+      const isStrictCSP = await this._detectStrictCSP();
+      
+      const executionOptions = {
+        preferDevTools: this.executionMethod === 'devTools' || isStrictCSP,
+        forceMethod: this.executionMethod === 'auto' ? null : this.executionMethod,
+        ...options
+      };
+      
+      // Log CSP detection for debugging
+      if (isStrictCSP) {
+        console.log('Strict CSP site detected, preferring DevTools execution');
+      }
+      
+      // Determine which action to use based on execution method
+      let action = 'executeJS'; // Default auto mode
+      if (this.executionMethod === 'mainWorld') {
+        action = 'executeViaMainWorld';
+      } else if (this.executionMethod === 'devTools') {
+        action = 'executeViaDevTools';
+      }
+      
       const response = await chrome.runtime.sendMessage({
-        action: 'executeJS',
-        code: code
+        action: action,
+        code: code,
+        options: executionOptions
       });
       
       if (response.success) {
@@ -155,22 +159,12 @@ IF YOU DEFINE A FUNCTION, MAKE SURE TO ACTUALLY CALL IT AT THE END OF YOUR CODE!
     }
   }
 
-  /**
-   * Generate and execute in one call
-   * Now supports element context and page context
-   * Includes validation by default to ensure executable code
-   */
   async execute(prompt, options = {}) {
-    // Enable validation by default for execution
-    const executeOptions = { validateCode: true, ...options };
-    const code = await this.generateCode(prompt, executeOptions);
-    const result = await this.runCode(code);
+    const code = await this.generateCode(prompt, options);
+    const result = await this.runCode(code, options);
     return { code, result };
   }
 
-  /**
-   * Generate code specifically for interacting with a selected element
-   */
   async generateElementInteraction(elementId, action, additionalContext = '', pageContext = null) {
     if (!this.elementManager) {
       throw new Error('Element manager not available');
@@ -185,61 +179,93 @@ IF YOU DEFINE A FUNCTION, MAKE SURE TO ACTUALLY CALL IT AT THE END OF YOUR CODE!
     return this.generateCode(prompt, { includeElementContext: true, pageContext });
   }
 
-  /**
-   * Validate generated code and fix execution issues
-   * Checks if the code is ready to execute and fixes common issues like uncalled functions
-   */
-async validateAndFixCode(code, originalPrompt) {
-  const validationMessages = [
-    {
-      role: "system",
-      content: `You are a JavaScript code validator. Make the code executable and robust.
-
-RULES:
-- Output ONLY executable JavaScript code
-- NO explanations, comments, or markdown
-- If functions are defined but not called, call them
-- Simplify complex selectors when possible
-- Add minimal changes only
-- Return unchanged if already executable
-
-SELECTOR OPTIMIZATION:
-- Replace complex position selectors with simpler alternatives
-- Use element.querySelector() with fallbacks for reliability
-- Examples:
-  * "center > input:nth-of-type(1)" → 'input[type="submit"]' or 'button'
-  * "div:nth-of-type(3) > form > div" → 'form input[name="q"]' 
-  * Long nth-of-type chains → simple tag or attribute selectors
-
-ROBUST ELEMENT SELECTION:
-let element = document.querySelector('simple-selector') || 
-              document.querySelector('fallback-selector') ||
-              document.querySelector('input[type="submit"]') ||
-              Array.from(document.querySelectorAll('input')).find(el => el.type === 'submit');`
-    },
-    {
-      role: "user", 
-      content: `Fix this code to be executable and use simpler, more reliable selectors:\n${code}`
+  // Execute with retry logic, trying different methods if needed
+  async executeWithRetry(prompt, options = {}, maxRetries = 2) {
+    let lastError;
+    let methods = ['auto', 'mainWorld', 'devTools'];
+    
+    for (let method of methods) {
+      this.setExecutionMethod(method);
+      
+      try {
+        const result = await this.execute(prompt, options);
+        
+        if (result.result && result.result.success !== false) {
+          return result;
+        }
+        
+        lastError = result.result?.error || 'Unknown error';
+      } catch (error) {
+        lastError = error.toString();
+      }
     }
-  ];
-
-  let response;
-  try {
-    response = await this.callExternalAPI(validationMessages);
-  } catch (error) {
-    response = await this.callWebLLM(validationMessages);
+    
+    return { 
+      code: '', 
+      result: { 
+        success: false, 
+        error: `Failed with all execution methods. Last error: ${lastError}` 
+      } 
+    };
   }
 
-  // Extract code from markdown if present
-  const match = response.match(/```(?:js|javascript)?\n?([\s\S]*?)```/);
-  return (match ? match[1] : response).trim();
-}
+  // Get current execution method info
+  async getExecutionInfo() {
+    const methods = {
+      'auto': 'Automatic selection (tries main world first, then DevTools on CSP failure)',
+      'mainWorld': 'Direct execution in MAIN world (may fail on strict CSP)',
+      'devTools': 'Chrome DevTools API (most reliable, shows debugger banner)'
+    };
+    
+    const isStrictCSP = await this._detectStrictCSP();
+    
+    return {
+      current: this.executionMethod,
+      description: methods[this.executionMethod],
+      available: Object.keys(methods),
+      strictCSPDetected: isStrictCSP,
+      recommendedMethod: isStrictCSP ? 'devTools' : 'auto'
+    };
+  }
 
-  /**
-   * Generate validated JavaScript code that's guaranteed to be executable
-   * Convenience method that always includes validation
-   */
-  async generateExecutableCode(prompt, options = {}) {
-    return this.generateCode(prompt, { ...options, validateCode: true });
+  // Helper method to detect if current page likely has strict CSP
+  async _detectStrictCSP() {
+    try {
+      const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (!activeTab || !activeTab.url) return false;
+      
+      const url = new URL(activeTab.url);
+      const hostname = url.hostname.toLowerCase();
+      
+      // Known domains with strict CSP that block Function constructor
+      const strictCSPDomains = [
+        'office365.com',
+        'teams.microsoft.com',
+        'outlook.com',
+        'onedrive.com',
+        'sharepoint.com',
+        'office.com',
+        'live.com',
+        'bing.com',
+        'delve.office.com',
+        'github.com' // GitHub also has strict CSP
+      ];
+      
+      return strictCSPDomains.some(domain => 
+        hostname === domain || hostname.endsWith('.' + domain)
+      );
+    } catch (error) {
+      return false;
+    }
+  }
+
+  // Automatically prefer DevTools on strict CSP sites
+  async _autoSelectExecutionMethod() {
+    if (this.executionMethod !== 'auto') return;
+    
+    const hasStrictCSP = await this._detectStrictCSP();
+    if (hasStrictCSP) {
+      this.setExecutionMethod('devTools');
+    }
   }
 }
