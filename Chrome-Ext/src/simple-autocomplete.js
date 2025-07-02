@@ -217,7 +217,7 @@
       switch (cmd) {
         case "help":
           if (window.addMessage) {
-            window.addMessage("\u{1F4A1} **Quick Help:**\n- Type @ to see suggestions\n- @clear - Clear chat\n- @picker - Select elements\n- @url, @title - Insert page info", "system");
+            window.addMessage("💡 **Quick Help:**\n- Type @ to see suggestions\n- @help - Show this help\n- @clear - Clear chat\n- @picker - Select elements\n- @export - Export chat\n- @elementName - Reference picked elements", "system");
           }
           break;
         case "clear":
