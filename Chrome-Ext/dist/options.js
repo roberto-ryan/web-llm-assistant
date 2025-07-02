@@ -4,6 +4,7 @@
   var apiSettingsEl = document.getElementById("apiSettings");
   var apiEndpointEl = document.getElementById("apiEndpoint");
   var apiKeyEl = document.getElementById("apiKey");
+  var apiModelEl = document.getElementById("apiModel");
   var webllmModelEl = document.getElementById("webllmModel");
   var saveBtn = document.getElementById("save");
   var testBtn = document.getElementById("test");
@@ -19,15 +20,33 @@
   useExternalAPIEl.addEventListener("change", () => {
     apiSettingsEl.style.display = useExternalAPIEl.checked ? "block" : "none";
   });
+  apiEndpointEl.addEventListener("input", () => {
+    const endpoint = apiEndpointEl.value.toLowerCase();
+    let suggestedModel = "";
+    if (endpoint.includes("openai")) {
+      suggestedModel = "gpt-4";
+    } else if (endpoint.includes("anthropic") || endpoint.includes("claude")) {
+      suggestedModel = "claude-3-5-sonnet-20241022";
+    } else if (endpoint.includes("ollama")) {
+      suggestedModel = "llama3.2:3b";
+    } else if (endpoint.includes("localhost") || endpoint.includes("127.0.0.1")) {
+      suggestedModel = "";
+    }
+    if (!apiModelEl.value.trim() && suggestedModel) {
+      apiModelEl.placeholder = `Suggested: ${suggestedModel}`;
+    }
+  });
   chrome.storage.sync.get({
     useExternalAPI: true,
     apiEndpoint: "http://localhost:1234/v1/chat/completions",
     apiKey: "",
+    apiModel: "",
     webllmModel: "Llama-3.2-1B-Instruct-q4f16_1-MLC"
   }, (settings) => {
     useExternalAPIEl.checked = settings.useExternalAPI;
     apiEndpointEl.value = settings.apiEndpoint;
     apiKeyEl.value = settings.apiKey;
+    apiModelEl.value = settings.apiModel;
     webllmModelEl.value = settings.webllmModel;
     apiSettingsEl.style.display = settings.useExternalAPI ? "block" : "none";
   });
@@ -38,12 +57,18 @@
       return;
     }
     const apiKey = apiKeyEl.value;
-    const model = webllmModelEl.value;
+    const apiModel = apiModelEl.value;
+    const webllmModel = webllmModelEl.value;
+    if (endpoint.includes("openai") && !apiKey) {
+      showStatus("OpenAI requires an API key. Please enter one.", "error");
+      return;
+    }
     const settings = {
       useExternalAPI: useExternalAPIEl.checked,
       apiEndpoint: endpoint,
       apiKey,
-      webllmModel: model
+      apiModel,
+      webllmModel
     };
     chrome.storage.sync.set(settings, () => {
       showStatus("Settings saved successfully!", "success");
@@ -56,6 +81,7 @@
     }
     const endpoint = apiEndpointEl.value;
     const apiKey = apiKeyEl.value;
+    const apiModel = apiModelEl.value;
     if (!isValidURL(endpoint)) {
       showStatus("Please enter a valid API endpoint URL.", "error");
       return;
@@ -63,6 +89,9 @@
     if (endpoint.includes("openai") && !apiKey) {
       showStatus("OpenAI requires an API key. Please enter one.", "error");
       return;
+    }
+    if (!apiModel.trim() && !endpoint.includes("localhost") && !endpoint.includes("127.0.0.1")) {
+      showStatus("\u26A0\uFE0F No model specified. Some APIs require a model parameter.", "success");
     }
     showStatus("Testing connection...", "success");
     try {
@@ -94,13 +123,18 @@
     }
   });
   function createRequestBody() {
-    return JSON.stringify({
+    const apiModel = apiModelEl.value;
+    const requestBody = {
       messages: [
         { role: "system", content: "You are a helpful assistant." },
         { role: "user", content: "Say 'Connection successful!'" }
       ],
       max_tokens: 50
-    });
+    };
+    if (apiModel && apiModel.trim()) {
+      requestBody.model = apiModel.trim();
+    }
+    return JSON.stringify(requestBody);
   }
   function showStatus(message, type) {
     statusEl.textContent = message;

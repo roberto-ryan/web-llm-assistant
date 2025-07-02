@@ -244,6 +244,7 @@ let messages = [];
 let useExternalAPI = true;
 let apiEndpoint = "";
 let apiKey = "";
+let apiModel = "";
 let webllmEngine = null;
 let webllmModel = "";
 
@@ -259,12 +260,14 @@ async function loadSettings() {
     useExternalAPI: true,
     apiEndpoint: "http://localhost:1234/v1/chat/completions",
     apiKey: "",
+    apiModel: "",
     webllmModel: "Llama-3.2-1B-Instruct-q4f16_1-MLC"
   });
   
   useExternalAPI = settings.useExternalAPI;
   apiEndpoint = settings.apiEndpoint;
   apiKey = settings.apiKey;
+  apiModel = settings.apiModel;
   webllmModel = settings.webllmModel;
   
   if (useExternalAPI && apiEndpoint) {
@@ -404,16 +407,23 @@ async function getPageContext() {
 
 // Call external API with streaming support
 async function callExternalAPI(messages, onChunk = null) {
+  const requestBody = {
+    messages: messages,
+    stream: !!onChunk // Enable streaming only if onChunk callback is provided
+  };
+  
+  // Add model if specified
+  if (apiModel && apiModel.trim()) {
+    requestBody.model = apiModel.trim();
+  }
+  
   const response = await fetch(apiEndpoint, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       ...(apiKey && { "Authorization": `Bearer ${apiKey}` })
     },
-    body: JSON.stringify({
-      messages: messages,
-      stream: !!onChunk // Enable streaming only if onChunk callback is provided
-    })
+    body: JSON.stringify(requestBody)
   });
   
   if (!response.ok) {
