@@ -220,12 +220,27 @@ class ElementManager {
             .filter(([key, value]) => value && value !== 'none' && value !== 'auto' && value !== '')
             .map(([key, value]) => `  ${key}: ${value}`)
             .join('\n');
+        
+        // Format attributes
+        const attributes = Object.entries(data.attributes || {})
+            .map(([key, value]) => `  ${key}: ${value}`)
+            .join('\n');
+        
+        // Format manipulation examples
+        const examples = data.manipulationExamples ? 
+            Object.entries(data.manipulationExamples)
+                .map(([action, code]) => `${action}:\n${code}`)
+                .join('\n\n') : '';
             
         return `Element: ${data.selector}
 Tag: <${data.tagName}>
 ${data.id ? `ID: ${data.id}` : ''}
 ${data.className ? `Classes: ${data.className}` : ''}
+${data.xpath ? `XPath: ${data.xpath}` : ''}
 ${data.position ? `Position: ${data.position.x}px, ${data.position.y}px (${data.position.width}x${data.position.height})` : ''}
+${data.isVisible !== undefined ? `Visible: ${data.isVisible}` : ''}
+${data.isClickable !== undefined ? `Clickable: ${data.isClickable}` : ''}
+${data.isInteractive !== undefined ? `Interactive: ${data.isInteractive}` : ''}
 
 HTML:
 \`\`\`html
@@ -234,10 +249,14 @@ ${data.html}
 
 ${data.text ? `Text Content: "${data.text}"` : ''}
 
+${attributes ? `Attributes:\n${attributes}\n` : ''}
+
 Key Styles:
 \`\`\`css
 ${styles}
-\`\`\``;
+\`\`\`
+
+${examples ? `Console Manipulation Examples:\n${examples}` : ''}`;
     }
     
     formatElementSummary(data, elementId) {
@@ -252,7 +271,7 @@ ${styles}
     }
 }
 
-// Simple and reliable Element Picker
+// Enhanced Element Picker with robust selection capabilities
 class ElementPicker {
     constructor(elementManager) {
         this.isActive = false;
@@ -412,21 +431,34 @@ class ElementPicker {
         const style = getComputedStyle(element);
         const rect = element.getBoundingClientRect();
         
-        return {
+        // Enhanced data extraction
+        const data = {
+            // Basic info (keeping existing structure)
             tagName: element.tagName.toLowerCase(),
             id: element.id || null,
             className: element.className || null,
-            selector: this.getSelector(element),
+            selector: this.getOptimalSelector(element),
+            xpath: this.getXPath(element),
             text: element.textContent?.trim().slice(0, 200) || null,
             html: element.outerHTML.length > 500 ? 
                 element.outerHTML.slice(0, 500) + '...' : 
                 element.outerHTML,
+            
+            // Position and dimensions
             position: {
                 x: rect.left,
                 y: rect.top,
                 width: rect.width,
-                height: rect.height
+                height: rect.height,
+                viewport: {
+                    top: rect.top,
+                    right: rect.right,
+                    bottom: rect.bottom,
+                    left: rect.left
+                }
             },
+            
+            // Extended styles for manipulation
             styles: {
                 display: style.display,
                 position: style.position,
@@ -435,11 +467,283 @@ class ElementPicker {
                 backgroundColor: style.backgroundColor,
                 color: style.color,
                 fontSize: style.fontSize,
-                fontFamily: style.fontFamily
+                fontFamily: style.fontFamily,
+                // Additional useful styles
+                opacity: style.opacity,
+                visibility: style.visibility,
+                zIndex: style.zIndex,
+                cursor: style.cursor,
+                overflow: style.overflow,
+                border: style.border,
+                padding: style.padding,
+                margin: style.margin,
+                transform: style.transform,
+                transition: style.transition
+            },
+            
+            // Interaction properties
+            isVisible: this.isElementVisible(element),
+            isClickable: this.isElementClickable(element),
+            isInteractive: this.isElementInteractive(element),
+            isInViewport: this.isInViewport(element),
+            
+            // All attributes for better identification
+            attributes: this.getAttributes(element),
+            
+            // Data attributes (commonly used in modern apps)
+            dataAttributes: this.getDataAttributes(element),
+            
+            // Form-related properties
+            formProperties: this.getFormProperties(element),
+            
+            // Parent context for better targeting
+            parentContext: this.getParentContext(element),
+            
+            // Console manipulation examples
+            manipulationExamples: this.generateManipulationExamples(element)
+        };
+        
+        return data;
+    }
+    
+    // Generate optimal selector with fallbacks
+    getOptimalSelector(element) {
+        // Priority: ID > unique attribute > class combination > nth-child
+        if (element.id) {
+            return `#${CSS.escape(element.id)}`;
+        }
+        
+        // Check for unique data attributes
+        const uniqueAttr = this.findUniqueAttribute(element);
+        if (uniqueAttr) {
+            return `${element.tagName.toLowerCase()}[${uniqueAttr.name}="${CSS.escape(uniqueAttr.value)}"]`;
+        }
+        
+        // Build class selector
+        if (element.className && typeof element.className === 'string') {
+            const classes = element.className.trim().split(/\s+/)
+                .filter(c => c && !c.match(/^(active|hover|focus|disabled)$/i))
+                .map(c => `.${CSS.escape(c)}`)
+                .join('');
+            
+            if (classes && document.querySelectorAll(classes).length === 1) {
+                return classes;
             }
+        }
+        
+        // Use nth-child with parent context
+        return this.getNthChildSelector(element);
+    }
+    
+    // Find unique attribute for selection
+    findUniqueAttribute(element) {
+        const attrs = ['data-testid', 'data-id', 'name', 'aria-label', 'role', 'type'];
+        
+        for (const attr of attrs) {
+            const value = element.getAttribute(attr);
+            if (value) {
+                const selector = `${element.tagName.toLowerCase()}[${attr}="${CSS.escape(value)}"]`;
+                if (document.querySelectorAll(selector).length === 1) {
+                    return { name: attr, value };
+                }
+            }
+        }
+        
+        return null;
+    }
+    
+    // Get nth-child selector with parent context
+    getNthChildSelector(element) {
+        const path = [];
+        let current = element;
+        
+        while (current && current !== document.body) {
+            let selector = current.tagName.toLowerCase();
+            
+            if (current.id) {
+                selector = `#${CSS.escape(current.id)}`;
+                path.unshift(selector);
+                break;
+            }
+            
+            const parent = current.parentElement;
+            if (parent) {
+                const index = Array.from(parent.children).indexOf(current) + 1;
+                selector += `:nth-child(${index})`;
+            }
+            
+            path.unshift(selector);
+            current = parent;
+        }
+        
+        return path.join(' > ');
+    }
+    
+    // Get XPath for element
+    getXPath(element) {
+        const path = [];
+        let current = element;
+        
+        while (current && current.nodeType === Node.ELEMENT_NODE) {
+            let index = 1;
+            let sibling = current.previousSibling;
+            
+            while (sibling) {
+                if (sibling.nodeType === Node.ELEMENT_NODE && sibling.tagName === current.tagName) {
+                    index++;
+                }
+                sibling = sibling.previousSibling;
+            }
+            
+            const tagName = current.tagName.toLowerCase();
+            const step = `${tagName}[${index}]`;
+            path.unshift(step);
+            
+            current = current.parentElement;
+        }
+        
+        return `//${path.join('/')}`;
+    }
+    
+    // Check if element is visible
+    isElementVisible(element) {
+        const style = getComputedStyle(element);
+        const rect = element.getBoundingClientRect();
+        
+        return !!(
+            rect.width > 0 &&
+            rect.height > 0 &&
+            style.opacity !== '0' &&
+            style.visibility !== 'hidden' &&
+            style.display !== 'none'
+        );
+    }
+    
+    // Check if element is clickable
+    isElementClickable(element) {
+        const clickableTags = ['a', 'button', 'input', 'select', 'textarea', 'label'];
+        const clickableRoles = ['button', 'link', 'checkbox', 'radio', 'menuitem', 'tab'];
+        
+        return !!(
+            clickableTags.includes(element.tagName.toLowerCase()) ||
+            element.onclick ||
+            element.getAttribute('onclick') ||
+            clickableRoles.includes(element.getAttribute('role')) ||
+            getComputedStyle(element).cursor === 'pointer'
+        );
+    }
+    
+    // Check if element is interactive
+    isElementInteractive(element) {
+        return !!(
+            element.isContentEditable ||
+            element.getAttribute('contenteditable') === 'true' ||
+            ['input', 'textarea', 'select'].includes(element.tagName.toLowerCase()) ||
+            element.tabIndex >= 0
+        );
+    }
+    
+    // Check if element is in viewport
+    isInViewport(element) {
+        const rect = element.getBoundingClientRect();
+        return (
+            rect.top >= 0 &&
+            rect.left >= 0 &&
+            rect.bottom <= window.innerHeight &&
+            rect.right <= window.innerWidth
+        );
+    }
+    
+    // Get all attributes
+    getAttributes(element) {
+        const attrs = {};
+        for (const attr of element.attributes) {
+            attrs[attr.name] = attr.value;
+        }
+        return attrs;
+    }
+    
+    // Get data attributes
+    getDataAttributes(element) {
+        const dataAttrs = {};
+        for (const attr of element.attributes) {
+            if (attr.name.startsWith('data-')) {
+                dataAttrs[attr.name] = attr.value;
+            }
+        }
+        return dataAttrs;
+    }
+    
+    // Get form-related properties
+    getFormProperties(element) {
+        const tagName = element.tagName.toLowerCase();
+        
+        if (['input', 'textarea', 'select'].includes(tagName)) {
+            return {
+                type: element.type || null,
+                name: element.name || null,
+                value: element.value || null,
+                placeholder: element.placeholder || null,
+                required: element.required || false,
+                disabled: element.disabled || false,
+                readonly: element.readOnly || false,
+                checked: element.checked || false,
+                maxLength: element.maxLength || null,
+                min: element.min || null,
+                max: element.max || null
+            };
+        }
+        
+        return null;
+    }
+    
+    // Get parent context
+    getParentContext(element) {
+        const parent = element.parentElement;
+        if (!parent || parent === document.body) return null;
+        
+        return {
+            tagName: parent.tagName.toLowerCase(),
+            id: parent.id || null,
+            className: parent.className || null,
+            selector: this.getSelector(parent)
         };
     }
     
+    // Generate console manipulation examples
+    generateManipulationExamples(element) {
+        const selector = this.getOptimalSelector(element);
+        const examples = {};
+        
+        // Click example
+        examples.click = `document.querySelector('${selector}').click();`;
+        
+        // Style manipulation
+        examples.changeColor = `document.querySelector('${selector}').style.backgroundColor = 'yellow';`;
+        examples.hide = `document.querySelector('${selector}').style.display = 'none';`;
+        examples.show = `document.querySelector('${selector}').style.display = '';`;
+        
+        // Text/value manipulation
+        if (['input', 'textarea'].includes(element.tagName.toLowerCase())) {
+            examples.setValue = `document.querySelector('${selector}').value = 'New value';`;
+        } else {
+            examples.setText = `document.querySelector('${selector}').textContent = 'New text';`;
+        }
+        
+        // Class manipulation
+        examples.addClass = `document.querySelector('${selector}').classList.add('highlight');`;
+        examples.removeClass = `document.querySelector('${selector}').classList.remove('highlight');`;
+        
+        // Scroll into view
+        examples.scrollTo = `document.querySelector('${selector}').scrollIntoView({ behavior: 'smooth' });`;
+        
+        // Get computed styles
+        examples.getStyles = `getComputedStyle(document.querySelector('${selector}'));`;
+        
+        return examples;
+    }
+    
+    // Simple selector for backward compatibility
     getSelector(element) {
         if (element.id) return `#${element.id}`;
         if (element.className) {
