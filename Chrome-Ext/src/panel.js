@@ -469,7 +469,11 @@ async function handleSend() {
       }
       
       addMessage("Generating code...", "system");
-      const { code, result } = await jsExecutor.execute(jsPrompt);
+      
+      // Get page context for better code generation
+      const pageContext = await getPageContext();
+      
+      const { code, result } = await jsExecutor.execute(jsPrompt, { pageContext });
       
       if (result.success) {
         addMessage(`✅ ${result.message || 'Code executed successfully'}\n\nCode:\n\`\`\`javascript\n${code}\n\`\`\``, "assistant");
@@ -493,7 +497,8 @@ async function handleSend() {
       
       try {
         addMessage("Generating click code...", "system");
-        const code = await jsExecutor.generateElementInteraction(elementId, 'click');
+        const pageContext = await getPageContext();
+        const code = await jsExecutor.generateElementInteraction(elementId, 'click', '', pageContext);
         const result = await jsExecutor.runCode(code);
         
         if (result.success) {
@@ -520,7 +525,8 @@ async function handleSend() {
       
       try {
         addMessage("Generating fill code...", "system");
-        const code = await jsExecutor.generateElementInteraction(elementId, 'fill', `with the text: "${text}"`);
+        const pageContext = await getPageContext();
+        const code = await jsExecutor.generateElementInteraction(elementId, 'fill', `with the text: "${text}"`, pageContext);
         const result = await jsExecutor.runCode(code);
         
         if (result.success) {

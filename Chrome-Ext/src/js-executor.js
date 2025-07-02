@@ -19,13 +19,25 @@ export class JSExecutor {
 
   /**
    * Generate JavaScript code using your existing AI functions
-   * Now supports element context from the element picker
+   * Now supports element context from the element picker and page context
    */
   async generateCode(prompt, options = {}) {
-    const { includeElementContext = true, availableElements = null } = options;
+    const { includeElementContext = true, availableElements = null, pageContext = null } = options;
     
     let enhancedPrompt = prompt;
     let elementContext = '';
+    let pageContextInfo = '';
+    
+    // Add page context if available
+    if (pageContext) {
+      pageContextInfo = `
+## Current Page Context:
+- URL: ${pageContext.url}
+- Title: ${pageContext.title}${pageContext.selection ? `
+- Selected text: "${pageContext.selection}"` : pageContext.visibleText ? `
+- Page preview: ${pageContext.visibleText}` : ''}
+`;
+    }
     
     // Add element context if available and requested
     if (includeElementContext && this.elementManager) {
@@ -51,6 +63,8 @@ export class JSExecutor {
 - You have access to standard web APIs: DOM, fetch, window, document, etc.
 - Do NOT use Node.js modules like 'require', 'child_process', 'fs', etc.
 
+${pageContextInfo}
+
 ## Core Requirements:
 - Write only executable code, no explanations or comments
 - Don't use try-catch blocks (they're added automatically)
@@ -70,6 +84,7 @@ To interact with these elements, use standard DOM methods:
 - For DOM manipulation: Use document.querySelector, etc.
 - For HTTP requests: Use fetch()
 - When interacting with stored elements, use their specific selectors for reliability
+- Use the page context above to understand the current page and make contextually relevant code
 - Only suggest complex automation (Puppeteer) if specifically requested
 
 NEVER use Node.js APIs like require(), exec(), fs, child_process, etc.`
@@ -133,7 +148,7 @@ NEVER use Node.js APIs like require(), exec(), fs, child_process, etc.`
 
   /**
    * Generate and execute in one call
-   * Now supports element context
+   * Now supports element context and page context
    */
   async execute(prompt, options = {}) {
     const code = await this.generateCode(prompt, options);
@@ -144,7 +159,7 @@ NEVER use Node.js APIs like require(), exec(), fs, child_process, etc.`
   /**
    * Generate code specifically for interacting with a selected element
    */
-  async generateElementInteraction(elementId, action, additionalContext = '') {
+  async generateElementInteraction(elementId, action, additionalContext = '', pageContext = null) {
     if (!this.elementManager) {
       throw new Error('Element manager not available');
     }
@@ -155,7 +170,7 @@ NEVER use Node.js APIs like require(), exec(), fs, child_process, etc.`
     }
     
     const prompt = `${action} the element @${elementId}. ${additionalContext}`.trim();
-    return this.generateCode(prompt, { includeElementContext: true });
+    return this.generateCode(prompt, { includeElementContext: true, pageContext });
   }
 
   /**
