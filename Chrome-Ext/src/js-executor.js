@@ -87,7 +87,9 @@ To interact with these elements, use standard DOM methods:
 - Use the page context above to understand the current page and make contextually relevant code
 - NEVER use Import Scripts or external libraries!
 
-NEVER use Node.js APIs like require(), exec(), fs, child_process, etc.`
+NEVER use Node.js APIs like require(), exec(), fs, child_process, etc.
+
+IF YOU DEFINE A FUNCTION, MAKE SURE TO ACTUALLY CALL IT AT THE END OF YOUR CODE!`
       },
       { role: "user", content: enhancedPrompt }
     ];
@@ -171,122 +173,5 @@ NEVER use Node.js APIs like require(), exec(), fs, child_process, etc.`
     
     const prompt = `${action} the element @${elementId}. ${additionalContext}`.trim();
     return this.generateCode(prompt, { includeElementContext: true, pageContext });
-  }
-
-  /**
-   * Get suggestions for what can be done with currently stored elements
-   */
-  getElementSuggestions() {
-    if (!this.elementManager) return [];
-    
-    const elements = this.elementManager.getAllElements();
-    const suggestions = [];
-    
-    elements.forEach(({ displayName, data }) => {
-      const name = `@${displayName}`;
-      
-      // Basic interactions based on element type
-      if (data.tagName === 'button' || data.tagName === 'input' && data.type === 'submit') {
-        suggestions.push(`Click ${name}`);
-      } else if (data.tagName === 'input') {
-        if (data.type === 'text' || data.type === 'email' || data.type === 'password') {
-          suggestions.push(`Fill ${name} with text`);
-        } else if (data.type === 'checkbox' || data.type === 'radio') {
-          suggestions.push(`Check/uncheck ${name}`);
-        }
-      } else if (data.tagName === 'select') {
-        suggestions.push(`Select option from ${name}`);
-      } else if (data.tagName === 'textarea') {
-        suggestions.push(`Fill ${name} with text`);
-      } else if (data.tagName === 'a') {
-        suggestions.push(`Click link ${name}`);
-      } else {
-        suggestions.push(`Interact with ${name}`);
-      }
-      
-      // General suggestions
-      suggestions.push(`Get text from ${name}`);
-      suggestions.push(`Scroll to ${name}`);
-    });
-    
-    return suggestions;
-  }
-
-  /**
-   * Generate code for common element operations
-   */
-  async generateCommonAction(action, elementId, value = null) {
-    if (!this.elementManager) {
-      throw new Error('Element manager not available');
-    }
-
-    const elementData = this.elementManager.getElementData(elementId);
-    if (!elementData) {
-      throw new Error(`Element @${elementId} not found`);
-    }
-
-    const selector = elementData.id ? `#${elementData.id}` : 
-                    elementData.className ? `.${elementData.className.split(' ')[0]}` : 
-                    elementData.tagName;
-
-    let code = '';
-    
-    switch (action.toLowerCase()) {
-      case 'click':
-        code = `document.querySelector('${selector}').click();`;
-        break;
-        
-      case 'fill':
-      case 'type':
-        if (!value) throw new Error('Value is required for fill/type action');
-        code = `
-const element = document.querySelector('${selector}');
-element.focus();
-element.value = '${value.replace(/'/g, "\\'")}';
-element.dispatchEvent(new Event('input', { bubbles: true }));
-element.dispatchEvent(new Event('change', { bubbles: true }));`;
-        break;
-        
-      case 'clear':
-        code = `
-const element = document.querySelector('${selector}');
-element.focus();
-element.value = '';
-element.dispatchEvent(new Event('input', { bubbles: true }));
-element.dispatchEvent(new Event('change', { bubbles: true }));`;
-        break;
-        
-      case 'gettext':
-        code = `
-const element = document.querySelector('${selector}');
-return element.textContent || element.value || '';`;
-        break;
-        
-      case 'scroll':
-        code = `
-const element = document.querySelector('${selector}');
-element.scrollIntoView({ behavior: 'smooth', block: 'center' });`;
-        break;
-        
-      case 'highlight':
-        code = `
-const element = document.querySelector('${selector}');
-element.style.outline = '3px solid red';
-setTimeout(() => element.style.outline = '', 2000);`;
-        break;
-        
-      default:
-        throw new Error(`Unknown action: ${action}`);
-    }
-    
-    return code.trim();
-  }
-
-  /**
-   * Execute a common action on an element
-   */
-  async executeCommonAction(action, elementId, value = null) {
-    const code = await this.generateCommonAction(action, elementId, value);
-    return this.runCode(code);
   }
 }
