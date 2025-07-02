@@ -330,6 +330,132 @@ ${examples}` : ""}`;
       this.onKeyDown = this.onKeyDown.bind(this);
       this.onContextMenu = this.onContextMenu.bind(this);
     }
+    // Core helper methods - defined first to be available throughout the class
+    // Check if an ID appears to be dynamically generated
+    isDynamicId(id) {
+      const dynamicPatterns = [
+        /\d{4,}/,
+        // Long numbers (timestamps, etc.)
+        /[a-f0-9]{8,}/,
+        // Hex strings (UUIDs, etc.)
+        /^(ember|react|vue|angular)\d+/,
+        // Framework-generated IDs
+        /^auto_/,
+        // Auto-generated prefixes
+        /temp|tmp|generated|random/i,
+        // Common dynamic keywords
+        /_\d+$/,
+        // Ending with underscore + number
+        /^[a-f0-9-]{36}$/
+        // UUID pattern
+      ];
+      return dynamicPatterns.some((pattern) => pattern.test(id));
+    }
+    // Check if a class is a utility class that should be avoided
+    isUtilityClass(className) {
+      const utilityPatterns = [
+        /^(m|p)[trblxy]?-\d+$/,
+        // margin/padding utilities (m-4, pt-2, etc.)
+        /^(w|h)-\d+$/,
+        // width/height utilities
+        /^text-(xs|sm|base|lg|xl|\d+xl)$/,
+        // text size utilities
+        /^(flex|grid|block|inline)/,
+        // display utilities
+        /^(bg|text|border)-(primary|secondary|success|danger|warning|info|light|dark)$/,
+        // color utilities
+        /^(rounded|shadow|opacity)/,
+        // common utility prefixes
+        /^(hover|focus|active):/,
+        // state prefixes
+        /^(sm|md|lg|xl):/,
+        // responsive prefixes
+        /^d-/,
+        // Bootstrap display utilities
+        /^col-/,
+        // Bootstrap grid
+        /^btn-/,
+        // Bootstrap button variants (but not 'btn' itself)
+        /^alert-/,
+        // Bootstrap alert variants
+        /^badge-/
+        // Bootstrap badge variants
+      ];
+      return utilityPatterns.some((pattern) => pattern.test(className)) || className.length < 3 || // Very short classes are often utilities
+      /^\d/.test(className);
+    }
+    // Get content-based selector for buttons and links
+    getContentSelector(element) {
+      var _a, _b;
+      const tag = element.tagName.toLowerCase();
+      const text = (_a = element.textContent) == null ? void 0 : _a.trim();
+      if (tag === "input" && ["submit", "button"].includes(element.type)) {
+        const value = (_b = element.value) == null ? void 0 : _b.trim();
+        if (value && value.length < 30) {
+          const selector = `input[value="${CSS.escape(value)}"]`;
+          if (document.querySelectorAll(selector).length === 1) {
+            return selector;
+          }
+        }
+      }
+      if (["button", "a"].includes(tag) && text && text.length < 50) {
+        const elements = Array.from(document.querySelectorAll(tag));
+        const matches = elements.filter((el) => {
+          var _a2;
+          return ((_a2 = el.textContent) == null ? void 0 : _a2.trim()) === text;
+        });
+        if (matches.length === 1) {
+          return `${tag} /* text: "${text}" */`;
+        }
+      }
+      if (tag === "input" && element.type === "submit") {
+        const form = element.closest("form");
+        if (form) {
+          if (form.id) {
+            return `#${CSS.escape(form.id)} input[type="submit"]`;
+          }
+          if (form.name) {
+            return `form[name="${CSS.escape(form.name)}"] input[type="submit"]`;
+          }
+        }
+      }
+      return null;
+    }
+    // Get CSS path for an element
+    getCSSPath(element) {
+      const path = [];
+      let current = element;
+      while (current && current !== document.documentElement) {
+        let selector = current.tagName.toLowerCase();
+        if (current.id) {
+          selector += `#${CSS.escape(current.id)}`;
+          path.unshift(selector);
+          break;
+        }
+        if (current.className) {
+          const classes = current.className.trim().split(/\s+/);
+          if (classes.length > 0) {
+            selector += "." + classes.map((c) => CSS.escape(c)).join(".");
+          }
+        }
+        const parent = current.parentElement;
+        if (parent) {
+          const siblings = Array.from(parent.children).filter((el) => el.tagName === current.tagName);
+          if (siblings.length > 1) {
+            const index = siblings.indexOf(current) + 1;
+            selector += `:nth-of-type(${index})`;
+          }
+        }
+        path.unshift(selector);
+        current = parent;
+      }
+      return path.join(" > ");
+    }
+    // Check if element is focusable
+    isFocusable(element) {
+      const focusableTags = ["input", "textarea", "select", "button", "a"];
+      return focusableTags.includes(element.tagName.toLowerCase()) || element.tabIndex >= 0 || element.isContentEditable;
+    }
     start() {
       if (this.isActive)
         return;
@@ -635,434 +761,121 @@ ${examples}` : ""}`;
       };
       if (element.id && !this.isDynamicId(element.id)) {
         selectors.primary = `#${CSS.escape(element.id)}`;
-        selectors.fallbacks.push(selectors.primary);
+        return selectors;
       }
-      const uniqueAttrSelector = this.getUniqueAttributeSelector(element);
-      if (uniqueAttrSelector) {
-        if (!selectors.primary)
-          selectors.primary = uniqueAttrSelector;
-        selectors.fallbacks.push(uniqueAttrSelector);
+      const simpleSelector = this.getSimpleAttributeSelector(element);
+      if (simpleSelector) {
+        selectors.primary = simpleSelector;
+        return selectors;
       }
-      const classSelector = this.getOptimalClassSelector(element);
+      const classSelector = this.getUniqueClassSelector(element);
       if (classSelector) {
-        if (!selectors.primary)
-          selectors.primary = classSelector;
-        selectors.fallbacks.push(classSelector);
+        selectors.primary = classSelector;
+        return selectors;
       }
-      const positionSelector = this.getPositionSelector(element);
-      if (!selectors.primary)
-        selectors.primary = positionSelector;
-      selectors.fallbacks.push(positionSelector);
       const contentSelector = this.getContentSelector(element);
       if (contentSelector) {
-        selectors.fallbacks.push(contentSelector);
+        selectors.primary = contentSelector;
+        return selectors;
       }
-      selectors.fallbacks = [...new Set(selectors.fallbacks)];
+      selectors.primary = this.getSimplePositionSelector(element);
       return selectors;
     }
-    // Check if ID is dynamically generated
-    isDynamicId(id) {
-      const patterns = [
-        /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i,
-        // UUID
-        /^ember\d+$/i,
-        // Ember.js
-        /^react-select-\d+-/i,
-        // React
-        /^ui-id-\d+$/i,
-        // jQuery UI
-        /^\d{10,}$/,
-        // Timestamp
-        /^[a-z]+-\d{6,}$/i
-        // Generic pattern
-      ];
-      return patterns.some((pattern) => pattern.test(id));
-    }
-    // Get unique attribute selector
-    getUniqueAttributeSelector(element) {
-      const attrs = [
-        "data-testid",
-        "data-test",
-        "data-cy",
-        "data-test-id",
-        "data-id",
-        "data-uid",
-        "data-key",
-        "aria-label",
-        "aria-labelledby",
-        "name",
-        "for",
-        "href",
-        "src",
-        "action"
-      ];
+    // New: Get simple attribute-based selector
+    getSimpleAttributeSelector(element) {
+      const attrs = ["name", "type", "placeholder", "value", "title", "alt", "aria-label", "role"];
+      const tag = element.tagName.toLowerCase();
       for (const attr of attrs) {
         const value = element.getAttribute(attr);
-        if (value) {
-          const selector = `${element.tagName.toLowerCase()}[${attr}="${CSS.escape(value)}"]`;
+        if (value && value.length < 50 && value.length > 0) {
+          const selector = `${tag}[${attr}="${CSS.escape(value)}"]`;
           if (document.querySelectorAll(selector).length === 1) {
             return selector;
           }
+          if (["button", "input"].includes(tag) && ["type", "value", "aria-label"].includes(attr)) {
+            const simpleSelector = `[${attr}="${CSS.escape(value)}"]`;
+            if (document.querySelectorAll(simpleSelector).length === 1) {
+              return simpleSelector;
+            }
+          }
+        }
+      }
+      if (tag === "input" && element.type === "submit") {
+        if (document.querySelectorAll('input[type="submit"]').length === 1) {
+          return 'input[type="submit"]';
         }
       }
       return null;
     }
-    // Get optimal class selector
-    getOptimalClassSelector(element) {
+    // New: Get unique class selector (single class only)
+    getUniqueClassSelector(element) {
       if (!element.className || typeof element.className !== "string")
         return null;
       const classes = element.className.trim().split(/\s+/).filter((c) => c && !this.isUtilityClass(c));
-      if (!classes.length)
-        return null;
-      for (let i = 1; i <= Math.min(3, classes.length); i++) {
-        const combinations = this.getCombinations(classes, i);
-        for (const combo of combinations) {
-          const selector = combo.map((c) => `.${CSS.escape(c)}`).join("");
-          if (document.querySelectorAll(selector).length === 1) {
-            return selector;
-          }
+      const tag = element.tagName.toLowerCase();
+      for (const cls of classes) {
+        const selector = `.${CSS.escape(cls)}`;
+        if (document.querySelectorAll(selector).length === 1) {
+          return selector;
+        }
+        const tagClassSelector = `${tag}.${CSS.escape(cls)}`;
+        if (document.querySelectorAll(tagClassSelector).length === 1) {
+          return tagClassSelector;
         }
       }
       return null;
     }
-    // Check if class is a utility class
-    isUtilityClass(className) {
-      const utilityPatterns = [
-        /^(active|hover|focus|disabled|selected|checked)$/i,
-        /^is-/i,
-        /^has-/i,
-        /^js-/i,
-        /^(xs|sm|md|lg|xl)$/i,
-        /^col-/i,
-        /^offset-/i,
-        /^text-(left|right|center)$/i
-      ];
-      return utilityPatterns.some((pattern) => pattern.test(className));
-    }
-    // Get combinations of array elements
-    getCombinations(arr, k) {
-      const combinations = [];
-      const combine = (start, combo) => {
-        if (combo.length === k) {
-          combinations.push([...combo]);
-          return;
+    // Modified: Simpler position selector (max 2 levels)
+    getSimplePositionSelector(element) {
+      const tag = element.tagName.toLowerCase();
+      const allOfType = document.querySelectorAll(tag);
+      if (allOfType.length === 1) {
+        return tag;
+      }
+      if (allOfType.length <= 3) {
+        const index = Array.from(allOfType).indexOf(element) + 1;
+        return `${tag}:nth-of-type(${index})`;
+      }
+      let parent = element.parentElement;
+      if (parent && parent.id && !this.isDynamicId(parent.id)) {
+        const selector = `#${CSS.escape(parent.id)} > ${tag}`;
+        if (document.querySelectorAll(selector).length === 1) {
+          return selector;
         }
-        for (let i = start; i < arr.length; i++) {
-          combo.push(arr[i]);
-          combine(i + 1, combo);
-          combo.pop();
+        const siblings = Array.from(parent.children).filter((el) => el.tagName === element.tagName);
+        if (siblings.length <= 3) {
+          const index = siblings.indexOf(element) + 1;
+          return `#${CSS.escape(parent.id)} > ${tag}:nth-of-type(${index})`;
         }
-      };
-      combine(0, []);
-      return combinations;
-    }
-    // Get position-based selector
-    getPositionSelector(element) {
-      const path = [];
-      let current = element;
-      while (current && current !== document.body) {
-        let selector = current.tagName.toLowerCase();
-        if (current.id && !this.isDynamicId(current.id)) {
-          selector = `#${CSS.escape(current.id)}`;
-          path.unshift(selector);
-          break;
-        }
-        const parent = current.parentElement;
-        if (parent) {
-          const sameTagSiblings = Array.from(parent.children).filter((child) => child.tagName === current.tagName);
-          if (sameTagSiblings.length > 1) {
-            const index = sameTagSiblings.indexOf(current) + 1;
-            selector += `:nth-of-type(${index})`;
+      }
+      if (parent && parent.className) {
+        const parentClasses = parent.className.trim().split(/\s+/).filter((c) => c && !this.isUtilityClass(c));
+        for (const cls of parentClasses) {
+          const selector = `.${CSS.escape(cls)} > ${tag}`;
+          if (document.querySelectorAll(selector).length === 1) {
+            return selector;
+          }
+          const siblings = Array.from(parent.children).filter((el) => el.tagName === element.tagName);
+          if (siblings.length <= 3) {
+            const index = siblings.indexOf(element) + 1;
+            const selectorWithIndex = `.${CSS.escape(cls)} > ${tag}:nth-of-type(${index})`;
+            if (document.querySelectorAll(selectorWithIndex).length === 1) {
+              return selectorWithIndex;
+            }
           }
         }
-        path.unshift(selector);
-        current = parent;
       }
-      return path.join(" > ");
-    }
-    // Get content-based selector
-    getContentSelector(element) {
-      var _a;
-      const text = (_a = element.textContent) == null ? void 0 : _a.trim();
-      if (!text || text.length < 3 || text.length > 50)
-        return null;
-      const tagName = element.tagName.toLowerCase();
-      const escapedText = CSS.escape(text);
-      return `${tagName}:contains("${escapedText}")`;
-    }
-    // Get CSS path
-    getCSSPath(element) {
-      const path = [];
-      let current = element;
-      while (current && current.nodeType === Node.ELEMENT_NODE) {
-        let selector = current.tagName.toLowerCase();
-        if (current.id) {
-          selector += `#${current.id}`;
-          path.unshift(selector);
-          break;
-        } else {
-          let sibling = current;
-          let nth = 1;
-          while (sibling.previousElementSibling) {
-            sibling = sibling.previousElementSibling;
-            if (sibling.tagName === current.tagName)
-              nth++;
-          }
-          if (nth > 1)
-            selector += `:nth-of-type(${nth})`;
+      if (parent) {
+        const siblings = Array.from(parent.children).filter((el) => el.tagName === element.tagName);
+        if (siblings.length <= 5) {
+          const index = siblings.indexOf(element) + 1;
+          return `${tag}:nth-of-type(${index})`;
         }
-        path.unshift(selector);
-        current = current.parentElement;
       }
-      return path.join(" > ");
+      return tag;
     }
-    // Detect event listeners
-    detectEventListeners(element) {
-      const listeners = [];
-      const eventTypes = [
-        "click",
-        "dblclick",
-        "mousedown",
-        "mouseup",
-        "mouseover",
-        "mouseout",
-        "keydown",
-        "keyup",
-        "keypress",
-        "change",
-        "input",
-        "submit",
-        "focus",
-        "blur"
-      ];
-      eventTypes.forEach((type) => {
-        if (element[`on${type}`]) {
-          listeners.push(type);
-        }
-        const hasListener = element.getAttribute(`on${type}`) || element.tagName.toLowerCase() === "button" && type === "click" || element.tagName.toLowerCase() === "a" && type === "click" || element.tagName.toLowerCase() === "input" && (type === "change" || type === "input");
-        if (hasListener && !listeners.includes(type)) {
-          listeners.push(type);
-        }
-      });
-      return listeners;
-    }
-    // Create content fingerprint
-    createContentFingerprint(element) {
-      var _a;
-      const text = ((_a = element.textContent) == null ? void 0 : _a.trim().slice(0, 50)) || "";
-      const attrs = Array.from(element.attributes).filter((a) => !["id", "class", "style"].includes(a.name)).map((a) => `${a.name}=${a.value}`).sort().join("|");
-      return {
-        tagName: element.tagName.toLowerCase(),
-        textSnippet: text,
-        attributeSignature: attrs,
-        childrenCount: element.children.length,
-        position: element.parentElement ? Array.from(element.parentElement.children).indexOf(element) : -1
-      };
-    }
-    // Get accessibility info
-    getAccessibilityInfo(element) {
-      return {
-        role: element.getAttribute("role") || this.getImplicitRole(element),
-        ariaLabel: element.getAttribute("aria-label"),
-        ariaLabelledBy: element.getAttribute("aria-labelledby"),
-        ariaDescribedBy: element.getAttribute("aria-describedby"),
-        ariaHidden: element.getAttribute("aria-hidden"),
-        tabIndex: element.tabIndex,
-        accessibleName: this.getAccessibleName(element)
-      };
-    }
-    // Get implicit ARIA role
-    getImplicitRole(element) {
-      const tagRoles = {
-        "a": "link",
-        "button": "button",
-        "input": element.type === "checkbox" ? "checkbox" : "textbox",
-        "select": "combobox",
-        "textarea": "textbox",
-        "img": "img",
-        "nav": "navigation",
-        "main": "main",
-        "header": "banner",
-        "footer": "contentinfo"
-      };
-      return tagRoles[element.tagName.toLowerCase()] || null;
-    }
-    // Get accessible name
-    getAccessibleName(element) {
-      var _a;
-      return element.getAttribute("aria-label") || element.getAttribute("title") || ((_a = element.textContent) == null ? void 0 : _a.trim().slice(0, 50)) || element.getAttribute("alt") || element.getAttribute("placeholder") || "";
-    }
-    // Check if element is in shadow DOM
-    isInShadowDOM(element) {
-      let current = element;
-      while (current) {
-        if (current instanceof ShadowRoot)
-          return true;
-        current = current.parentNode;
-      }
-      return false;
-    }
-    // Get frame info
-    getFrameInfo(element) {
-      if (window.self === window.top)
-        return null;
-      return {
-        isInFrame: true,
-        frameDepth: this.getFrameDepth(),
-        frameSrc: window.location.href
-      };
-    }
-    // Get frame depth
-    getFrameDepth() {
-      let depth = 0;
-      let currentWindow = window;
-      while (currentWindow !== window.top) {
-        depth++;
-        currentWindow = currentWindow.parent;
-        if (depth > 10)
-          break;
-      }
-      return depth;
-    }
-    // Get sibling context
-    getSiblingContext(element) {
-      const parent = element.parentElement;
-      if (!parent)
-        return null;
-      const siblings = Array.from(parent.children);
-      const index = siblings.indexOf(element);
-      return {
-        totalSiblings: siblings.length,
-        position: index + 1,
-        previousSibling: index > 0 ? {
-          tagName: siblings[index - 1].tagName.toLowerCase(),
-          id: siblings[index - 1].id || null,
-          className: siblings[index - 1].className || null
-        } : null,
-        nextSibling: index < siblings.length - 1 ? {
-          tagName: siblings[index + 1].tagName.toLowerCase(),
-          id: siblings[index + 1].id || null,
-          className: siblings[index + 1].className || null
-        } : null
-      };
-    }
-    // Check if element is focusable
-    isFocusable(element) {
-      const focusableTags = ["a", "button", "input", "select", "textarea"];
-      const tagName = element.tagName.toLowerCase();
-      if (focusableTags.includes(tagName)) {
-        return !element.disabled;
-      }
-      return element.tabIndex >= 0;
-    }
-    // Generate advanced manipulation examples
-    generateAdvancedManipulationExamples(element, selector) {
-      const examples = {};
-      const escapedSelector = selector.replace(/'/g, "\\'");
-      examples.click = `document.querySelector('${escapedSelector}').click();`;
-      examples.focus = `document.querySelector('${escapedSelector}').focus();`;
-      examples.scrollIntoView = `document.querySelector('${escapedSelector}').scrollIntoView({ behavior: 'smooth', block: 'center' });`;
-      examples.highlight = `(() => {
-    const el = document.querySelector('${escapedSelector}');
-    el.style.outline = '3px solid red';
-    el.style.backgroundColor = 'yellow';
-})();`;
-      examples.hide = `document.querySelector('${escapedSelector}').style.display = 'none';`;
-      examples.show = `document.querySelector('${escapedSelector}').style.display = '';`;
-      examples.fadeOut = `(() => {
-    const el = document.querySelector('${escapedSelector}');
-    el.style.transition = 'opacity 0.5s';
-    el.style.opacity = '0';
-    setTimeout(() => el.style.display = 'none', 500);
-})();`;
-      if (["input", "textarea"].includes(element.tagName.toLowerCase())) {
-        examples.setValue = `document.querySelector('${escapedSelector}').value = 'New value';`;
-        examples.clearValue = `document.querySelector('${escapedSelector}').value = '';`;
-        examples.typeText = `(() => {
-    const el = document.querySelector('${escapedSelector}');
-    el.focus();
-    el.value = '';
-    const text = 'Hello World';
-    let i = 0;
-    const typeInterval = setInterval(() => {
-        if (i < text.length) {
-            el.value += text[i];
-            el.dispatchEvent(new Event('input', { bubbles: true }));
-            i++;
-        } else {
-            clearInterval(typeInterval);
-        }
-    }, 100);
-})();`;
-      } else {
-        examples.setText = `document.querySelector('${escapedSelector}').textContent = 'New text';`;
-        examples.setHTML = `document.querySelector('${escapedSelector}').innerHTML = '<strong>New HTML</strong>';`;
-      }
-      examples.simulateClick = `(() => {
-    const el = document.querySelector('${escapedSelector}');
-    const event = new MouseEvent('click', {
-        view: window,
-        bubbles: true,
-        cancelable: true,
-        buttons: 1
-    });
-    el.dispatchEvent(event);
-})();`;
-      examples.simulateHover = `(() => {
-    const el = document.querySelector('${escapedSelector}');
-    el.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
-    el.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
-})();`;
-      examples.waitAndClick = `(() => {
-    const checkAndClick = setInterval(() => {
-        const el = document.querySelector('${escapedSelector}');
-        if (el && el.offsetParent !== null) {
-            el.click();
-            clearInterval(checkAndClick);
-            console.log('Element clicked');
-        }
-    }, 500);
-    setTimeout(() => {
-        clearInterval(checkAndClick);
-        console.log('Timeout: Element not found');
-    }, 10000);
-})();`;
-      examples.extractData = `(() => {
-    const el = document.querySelector('${escapedSelector}');
-    return {
-        text: el.textContent,
-        value: el.value || null,
-        href: el.href || null,
-        attributes: Object.fromEntries(Array.from(el.attributes).map(a => [a.name, a.value]))
-    };
-})();`;
-      if (element.draggable || element.getAttribute("draggable") === "true") {
-        examples.dragTo = `(() => {
-    const source = document.querySelector('${escapedSelector}');
-    const target = document.querySelector('TARGET_SELECTOR'); // Replace with target
-    
-    const dragStart = new DragEvent('dragstart', {
-        bubbles: true,
-        cancelable: true,
-        dataTransfer: new DataTransfer()
-    });
-    
-    const drop = new DragEvent('drop', {
-        bubbles: true,
-        cancelable: true,
-        dataTransfer: dragStart.dataTransfer
-    });
-    
-    source.dispatchEvent(dragStart);
-    target.dispatchEvent(drop);
-})();`;
-      }
-      return examples;
-    }
-    // Existing helper methods remain the same
-    getOptimalSelector(element) {
-      return this.generateSelectors(element).primary;
-    }
+    // Additional core methods
+    // Get XPath for an element
     getXPath(element) {
       const path = [];
       let current = element;
@@ -1082,6 +895,11 @@ ${examples}` : ""}`;
       }
       return `//${path.join("/")}`;
     }
+    // Get optimal selector using the new strategy
+    getOptimalSelector(element) {
+      return this.generateSelectors(element).primary;
+    }
+    // Element visibility and interaction checks
     isElementVisible(element) {
       const style = getComputedStyle(element);
       const rect = element.getBoundingClientRect();
@@ -1100,6 +918,7 @@ ${examples}` : ""}`;
       const rect = element.getBoundingClientRect();
       return rect.top >= 0 && rect.left >= 0 && rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) && rect.right <= (window.innerWidth || document.documentElement.clientWidth);
     }
+    // Element attribute helpers
     getAttributes(element) {
       const attrs = {};
       for (const attr of element.attributes) {
@@ -1148,6 +967,119 @@ ${examples}` : ""}`;
         className: parent.className || null,
         selector: this.getOptimalSelector(parent)
       };
+    }
+    // Additional helper methods for element analysis
+    detectEventListeners(element) {
+      const listeners = [];
+      const eventAttrs = ["onclick", "onmouseover", "onmouseout", "onchange", "onsubmit", "onfocus", "onblur"];
+      eventAttrs.forEach((attr) => {
+        if (element.hasAttribute(attr)) {
+          listeners.push(attr.substring(2));
+        }
+      });
+      if (element.style.cursor === "pointer")
+        listeners.push("click");
+      if (element.tagName.toLowerCase() === "a")
+        listeners.push("click");
+      if (element.tagName.toLowerCase() === "button")
+        listeners.push("click");
+      if (element.type === "submit")
+        listeners.push("submit");
+      if (["input", "textarea", "select"].includes(element.tagName.toLowerCase())) {
+        listeners.push("change", "input");
+      }
+      return [...new Set(listeners)];
+    }
+    createContentFingerprint(element) {
+      var _a;
+      const text = ((_a = element.textContent) == null ? void 0 : _a.trim()) || "";
+      const attributes = Array.from(element.attributes).map((a) => `${a.name}=${a.value}`).sort().join("|");
+      return {
+        tagName: element.tagName.toLowerCase(),
+        textSnippet: text.slice(0, 50),
+        attributeSignature: attributes.slice(0, 100),
+        classCount: element.classList.length,
+        childCount: element.children.length
+      };
+    }
+    getAccessibilityInfo(element) {
+      return {
+        role: element.getAttribute("role"),
+        ariaLabel: element.getAttribute("aria-label"),
+        ariaDescribedBy: element.getAttribute("aria-describedby"),
+        ariaExpanded: element.getAttribute("aria-expanded"),
+        ariaHidden: element.getAttribute("aria-hidden"),
+        tabIndex: element.tabIndex,
+        alt: element.getAttribute("alt"),
+        title: element.getAttribute("title")
+      };
+    }
+    isInShadowDOM(element) {
+      let current = element;
+      while (current) {
+        if (current.getRootNode() !== document) {
+          return true;
+        }
+        current = current.parentElement;
+      }
+      return false;
+    }
+    getFrameInfo(element) {
+      return {
+        isInFrame: window !== window.top,
+        frameDepth: this.getFrameDepth(),
+        frameOrigin: window.location.origin
+      };
+    }
+    getFrameDepth() {
+      let depth = 0;
+      let current = window;
+      try {
+        while (current !== current.parent) {
+          depth++;
+          current = current.parent;
+        }
+      } catch (e) {
+      }
+      return depth;
+    }
+    getSiblingContext(element) {
+      var _a, _b;
+      const parent = element.parentElement;
+      if (!parent)
+        return null;
+      const siblings = Array.from(parent.children);
+      const index = siblings.indexOf(element);
+      return {
+        totalSiblings: siblings.length,
+        index,
+        isFirst: index === 0,
+        isLast: index === siblings.length - 1,
+        previousSibling: ((_a = siblings[index - 1]) == null ? void 0 : _a.tagName.toLowerCase()) || null,
+        nextSibling: ((_b = siblings[index + 1]) == null ? void 0 : _b.tagName.toLowerCase()) || null
+      };
+    }
+    generateAdvancedManipulationExamples(element, selector) {
+      const examples = {};
+      const tagName = element.tagName.toLowerCase();
+      examples["Click"] = `document.querySelector('${selector}').click()`;
+      examples["Focus"] = `document.querySelector('${selector}').focus()`;
+      if (["input", "textarea"].includes(tagName)) {
+        examples["Set Value"] = `document.querySelector('${selector}').value = 'new value'`;
+        examples["Clear"] = `document.querySelector('${selector}').value = ''`;
+      }
+      if (element.type === "checkbox" || element.type === "radio") {
+        examples["Check"] = `document.querySelector('${selector}').checked = true`;
+        examples["Uncheck"] = `document.querySelector('${selector}').checked = false`;
+      }
+      if (tagName === "select") {
+        examples["Select Option"] = `document.querySelector('${selector}').value = 'option-value'`;
+      }
+      examples["Hide"] = `document.querySelector('${selector}').style.display = 'none'`;
+      examples["Show"] = `document.querySelector('${selector}').style.display = 'block'`;
+      examples["Change Text"] = `document.querySelector('${selector}').textContent = 'New text'`;
+      examples["Trigger Change"] = `document.querySelector('${selector}').dispatchEvent(new Event('change'))`;
+      return examples;
     }
   };
   window.ElementPicker = ElementPicker;

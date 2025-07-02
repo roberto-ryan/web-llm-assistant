@@ -189,53 +189,51 @@ IF YOU DEFINE A FUNCTION, MAKE SURE TO ACTUALLY CALL IT AT THE END OF YOUR CODE!
    * Validate generated code and fix execution issues
    * Checks if the code is ready to execute and fixes common issues like uncalled functions
    */
-  async validateAndFixCode(code, originalPrompt) {
-    const validationMessages = [
-      {
-        role: "system",
-        content: `You are a JavaScript code validator. Analyze the provided code and determine if it's ready to execute in the browser console.
+async validateAndFixCode(code, originalPrompt) {
+  const validationMessages = [
+    {
+      role: "system",
+      content: `You are a JavaScript code validator. Make the code executable and robust.
 
-## Your Task:
-1. Check if the code will actually execute when run (not just define functions)
-2. If functions are defined but not called, add the minimal code to call them
-3. If the code is already executable, return it unchanged
-4. Only make minimal changes needed for execution
+RULES:
+- Output ONLY executable JavaScript code
+- NO explanations, comments, or markdown
+- If functions are defined but not called, call them
+- Simplify complex selectors when possible
+- Add minimal changes only
+- Return unchanged if already executable
 
-## Rules:
-- Output ONLY the executable JavaScript code, no explanations
-- Don't add try-catch blocks
-- Don't add comments or explanations
-- If a function is defined but not called, call it at the end
-- If the code is already executable, don't change it
-- Keep all original functionality intact`
-      },
-      {
-        role: "user",
-        content: `Original request: "${originalPrompt}"
+SELECTOR OPTIMIZATION:
+- Replace complex position selectors with simpler alternatives
+- Use element.querySelector() with fallbacks for reliability
+- Examples:
+  * "center > input:nth-of-type(1)" → 'input[type="submit"]' or 'button'
+  * "div:nth-of-type(3) > form > div" → 'form input[name="q"]' 
+  * Long nth-of-type chains → simple tag or attribute selectors
 
-Generated code to validate:
-\`\`\`javascript
-${code}
-\`\`\`
-
-Is this code ready to execute? If not, fix it with minimal changes to make it executable.`
-      }
-    ];
-
-    let response;
-    try {
-      response = await this.callExternalAPI(validationMessages);
-    } catch (error) {
-      response = await this.callWebLLM(validationMessages);
+ROBUST ELEMENT SELECTION:
+let element = document.querySelector('simple-selector') || 
+              document.querySelector('fallback-selector') ||
+              document.querySelector('input[type="submit"]') ||
+              Array.from(document.querySelectorAll('input')).find(el => el.type === 'submit');`
+    },
+    {
+      role: "user", 
+      content: `Fix this code to be executable and use simpler, more reliable selectors:\n${code}`
     }
+  ];
 
-    // Extract code from markdown if present
-    let validatedCode = response;
-    const match = validatedCode.match(/```(?:js|javascript)?\n?([\s\S]*?)```/);
-    if (match) validatedCode = match[1];
-    
-    return validatedCode.trim();
+  let response;
+  try {
+    response = await this.callExternalAPI(validationMessages);
+  } catch (error) {
+    response = await this.callWebLLM(validationMessages);
   }
+
+  // Extract code from markdown if present
+  const match = response.match(/```(?:js|javascript)?\n?([\s\S]*?)```/);
+  return (match ? match[1] : response).trim();
+}
 
   /**
    * Generate validated JavaScript code that's guaranteed to be executable
