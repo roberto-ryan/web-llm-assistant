@@ -2,7 +2,9 @@
 import showdown from "showdown";
 import { ServiceWorkerMLCEngine } from "@mlc-ai/web-llm";
 import { MenuManager } from "./menu-template.js";
-import { JSExecutor } from "./js-executor.js";
+import { JSExecutorExtended } from "./js-executor-extended.js";
+import { createEnhancedCodeBlockSystem } from "./codeblock-enhancer.js";
+import { CodeToolbox, ToolboxUI, toolboxStyles } from "./code-toolbox.js";
 
 const messagesDiv = document.getElementById("messages");
 const inputEl = document.getElementById("input");
@@ -235,7 +237,15 @@ const elementPickerController = new ElementPickerController();
 // Make it globally accessible for menu
 window.elementPickerController = elementPickerController;
 
-const markdownConverter = new showdown.Converter({
+// Initialize code toolbox
+const codeToolbox = new CodeToolbox();
+const toolboxUI = new ToolboxUI(codeToolbox, null); // Will set jsExecutor later
+
+// Make toolbox globally accessible
+window.codeToolbox = codeToolbox;
+window.toolboxUI = toolboxUI;
+
+let markdownConverter = new showdown.Converter({
   simplifiedAutoLink: true,
   openLinksInNewWindow: true
 });
@@ -283,8 +293,34 @@ async function loadSettings() {
   // Initialize menu after settings are loaded
   menuManager.init();
   
-  // Initialize JS executor with your existing AI functions
-  jsExecutor = new JSExecutor(callExternalAPI, callWebLLM);
+  // Initialize enhanced JS executor
+  jsExecutor = new JSExecutorExtended(callExternalAPI, callWebLLM);
+  
+  // Update toolbox UI with JS executor
+  toolboxUI.jsExecutor = jsExecutor;
+  
+  // Create enhanced code block system
+  const codeEnhancer = createEnhancedCodeBlockSystem(jsExecutor, codeToolbox);
+  
+  // Update markdown converter with code enhancer
+  markdownConverter = new showdown.Converter({
+    simplifiedAutoLink: true,
+    openLinksInNewWindow: true,
+    extensions: [codeEnhancer.getShowdownExtension()]
+  });
+  
+  // Store code enhancer globally for message handling
+  window.codeEnhancer = codeEnhancer;
+  
+  // Inject code block styles
+  const codeBlockStyles = document.createElement('style');
+  codeBlockStyles.textContent = codeEnhancer.getStyles();
+  document.head.appendChild(codeBlockStyles);
+  
+  // Inject toolbox styles
+  const toolboxStyleEl = document.createElement('style');
+  toolboxStyleEl.textContent = toolboxStyles;
+  document.head.appendChild(toolboxStyleEl);
   
   // Connect element manager to JS executor when available
   if (elementPickerController && elementPickerController.elementManager) {
@@ -343,6 +379,10 @@ function addMessage(content, role) {
   
   if (role === "assistant") {
     messageEl.innerHTML = markdownConverter.makeHtml(content);
+    // Attach code block listeners after adding HTML
+    if (window.codeEnhancer) {
+      window.codeEnhancer.attachListeners(messageEl);
+    }
   } else if (role === "user") {
     // For user messages, preserve newlines by converting them to <br> tags
     // and escape HTML to prevent XSS
@@ -377,6 +417,10 @@ function createStreamingMessage(role) {
 function updateStreamingMessage(messageEl, content, role) {
   if (role === "assistant") {
     messageEl.innerHTML = markdownConverter.makeHtml(content);
+    // Attach code block listeners after updating HTML
+    if (window.codeEnhancer) {
+      window.codeEnhancer.attachListeners(messageEl);
+    }
   } else {
     messageEl.innerHTML = content;
   }
@@ -562,7 +606,14 @@ async function handleSend() {
       const { code, result } = await jsExecutor.execute(jsPrompt, { pageContext });
       
       if (result.success) {
-        addMessage(`✅ ${result.message || 'Code executed successfully'}\n\nCode:\n\`\`\`javascript\n${code}\n\`\`\``, "assistant");
+        let message = `✅ ${result.message || 'Code executed successfully'}\n\nCode:\n\`\`\`javascript\n${code}\n\`\`\``;
+        
+        // If undo code was generated, mention it
+        if (result.undoCode) {
+          message += '\n\n*Undo code has been generated. Click the Undo button in the code block to reverse changes.*';
+        }
+        
+        addMessage(message, "assistant");
       } else {
         addMessage(`❌ ${result.error}\n\nCode:\n\`\`\`javascript\n${code}\n\`\`\``, "error");
       }
@@ -674,6 +725,27 @@ Provide helpful, concise responses.`
   sendBtn.disabled = false;
   inputEl.focus();
 }
+
+// Add content script listener for code execution
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.action === 'codeExecuted' && request.toolId) {
+    // Update tool statistics when code is executed
+    const tool = codeToolbox.getTool(request.toolId);
+    if (tool) {
+      tool.runCount++;
+      tool.lastRun = Date.now();
+      codeToolbox.saveToStorage();
+    }
+  }
+});
+
+// On startup, show if any tools have auto-run enabled
+setTimeout(() => {
+  const autoRunTools = Array.from(codeToolbox.autoRunRules.keys());
+  if (autoRunTools.length > 0) {
+    addMessage(`🚀 ${autoRunTools.length} tool(s) set to auto-run on page load`, "system");
+  }
+}, 1000);
 
 // Event listeners
 sendBtn.addEventListener("click", handleSend);

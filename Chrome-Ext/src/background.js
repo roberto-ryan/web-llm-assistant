@@ -227,6 +227,19 @@ async function executeJavaScript(code, options = {}) {
   }
 }
 
+// Handle code toolbox auto-execution
+chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+  if (changeInfo.status === 'complete' && tab.url && !tab.url.startsWith('chrome://')) {
+    // Notify the panel if it's open that a page has loaded
+    chrome.runtime.sendMessage({
+      action: 'tabUpdated',
+      tab: { id: tab.id, url: tab.url }
+    }).catch(() => {
+      // Panel might not be open, ignore error
+    });
+  }
+});
+
 // Handle messages
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'executeJS') {
@@ -243,6 +256,63 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     executeViaDevTools(request.code)
       .then(result => sendResponse({ success: true, result }))
       .catch(error => sendResponse({ success: false, error: error.toString() }));
+    return true;
+  } else if (request.action === 'executeJSWithTracking') {
+    // Execute code with DOM change tracking for undo generation
+    const enhancedCode = `
+      // DOM Change Tracker
+      const changes = [];
+      const observer = new MutationObserver((mutations) => {
+        mutations.forEach(mutation => {
+          changes.push({
+            type: mutation.type,
+            target: mutation.target.tagName,
+            timestamp: Date.now()
+          });
+        });
+      });
+      
+      // Start observing
+      observer.observe(document.body, {
+        childList: true,
+        attributes: true,
+        attributeOldValue: true,
+        characterData: true,
+        characterDataOldValue: true,
+        subtree: true
+      });
+      
+      // Execute user code
+      const result = await (async () => {
+        ${request.code}
+      })();
+      
+      // Stop observing
+      observer.disconnect();
+      
+      // Return result and changes
+      ({ result, changes });
+    `;
+    
+    executeJavaScript(enhancedCode, request.options || {})
+      .then(result => {
+        if (result.success && result.result) {
+          sendResponse({ 
+            success: true, 
+            result: result.result.result,
+            changes: result.result.changes,
+            usedFallback: result.usedFallback 
+          });
+        } else {
+          sendResponse(result);
+        }
+      })
+      .catch(error => sendResponse({ success: false, error: error.toString() }));
+    return true;
+  } else if (request.action === 'getTabInfo') {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      sendResponse(tabs[0] || null);
+    });
     return true;
   } else if (request.action === 'elementSelected') {
     chrome.runtime.sendMessage(request);

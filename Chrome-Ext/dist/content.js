@@ -1,5 +1,96 @@
 (() => {
   // src/content.js
+  var DOMChangeTracker = class {
+    constructor() {
+      this.changes = [];
+      this.observer = null;
+      this.startTime = null;
+    }
+    start() {
+      this.startTime = Date.now();
+      this.changes = [];
+      this.observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+          const change = {
+            type: mutation.type,
+            timestamp: Date.now(),
+            target: this.getElementPath(mutation.target)
+          };
+          if (mutation.type === "childList") {
+            change.addedNodes = Array.from(mutation.addedNodes).map((node) => ({
+              nodeType: node.nodeType,
+              nodeName: node.nodeName,
+              textContent: node.textContent
+            }));
+            change.removedNodes = Array.from(mutation.removedNodes).map((node) => ({
+              nodeType: node.nodeType,
+              nodeName: node.nodeName,
+              textContent: node.textContent
+            }));
+          } else if (mutation.type === "attributes") {
+            change.attributeName = mutation.attributeName;
+            change.oldValue = mutation.oldValue;
+            change.newValue = mutation.target.getAttribute(mutation.attributeName);
+          } else if (mutation.type === "characterData") {
+            change.oldValue = mutation.oldValue;
+            change.newValue = mutation.target.textContent;
+          }
+          this.changes.push(change);
+        });
+      });
+      this.observer.observe(document.body, {
+        childList: true,
+        attributes: true,
+        attributeOldValue: true,
+        characterData: true,
+        characterDataOldValue: true,
+        subtree: true
+      });
+    }
+    stop() {
+      if (this.observer) {
+        this.observer.disconnect();
+        this.observer = null;
+      }
+      return this.changes;
+    }
+    generateUndoCode() {
+      if (this.changes.length === 0)
+        return null;
+      const undoOperations = this.changes.reverse().map((change) => {
+        if (change.type === "attributes" && change.oldValue !== null) {
+          return `document.querySelector('${change.target}').setAttribute('${change.attributeName}', '${change.oldValue}');`;
+        } else if (change.type === "characterData") {
+          return `document.querySelector('${change.target}').textContent = '${change.oldValue}';`;
+        }
+        return `// Complex undo operation for ${change.type} change`;
+      });
+      return undoOperations.join("\n");
+    }
+    getElementPath(element) {
+      if (!element || element === document.body)
+        return "body";
+      const parts = [];
+      while (element && element !== document.body) {
+        let selector = element.tagName.toLowerCase();
+        if (element.id) {
+          selector += `#${element.id}`;
+          parts.unshift(selector);
+          break;
+        } else if (element.className) {
+          selector += `.${element.className.split(" ").join(".")}`;
+        }
+        const siblings = Array.from(element.parentNode.children);
+        const index = siblings.indexOf(element);
+        if (index > 0) {
+          selector += `:nth-child(${index + 1})`;
+        }
+        parts.unshift(selector);
+        element = element.parentNode;
+      }
+      return parts.join(" > ");
+    }
+  };
   var lastSelection = "";
   var picker = null;
   var elementManager = null;
@@ -93,7 +184,46 @@
       } catch (error) {
         sendResponse({ status: "error", message: error.message });
       }
+    } else if (message.action === "executeCode") {
+      try {
+        let changeTracker = null;
+        if (message.trackChanges) {
+          changeTracker = new DOMChangeTracker();
+          changeTracker.start();
+        }
+        const result = function() {
+          try {
+            const execute = new Function("document", "window", message.code);
+            const output = execute(document, window);
+            return { success: true, output };
+          } catch (error) {
+            return { success: false, error: error.message };
+          }
+        }();
+        if (changeTracker) {
+          const changes = changeTracker.stop();
+          result.changes = changes;
+          result.undoCode = changeTracker.generateUndoCode();
+        }
+        if (message.toolId) {
+          chrome.runtime.sendMessage({
+            action: "codeExecuted",
+            toolId: message.toolId,
+            isAutoRun: message.isAutoRun || false
+          });
+        }
+        sendResponse(result);
+      } catch (error) {
+        sendResponse({ success: false, error: error.message });
+      }
     }
     return true;
   });
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", () => {
+      chrome.runtime.sendMessage({ action: "pageReady", url: window.location.href });
+    });
+  } else {
+    chrome.runtime.sendMessage({ action: "pageReady", url: window.location.href });
+  }
 })();

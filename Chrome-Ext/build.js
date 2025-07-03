@@ -100,6 +100,28 @@ Promise.all([
     format: 'iife',
     entryPoints: ['src/simple-autocomplete.js'],
     outfile: 'dist/simple-autocomplete.js',
+  }),
+  
+  // New enhanced modules - build as ES modules
+  build({
+    ...commonOptions,
+    format: 'esm',
+    entryPoints: ['src/js-executor-extended.js'],
+    outfile: 'dist/js-executor-extended.js',
+  }),
+
+  build({
+    ...commonOptions,
+    format: 'esm',
+    entryPoints: ['src/codeblock-enhancer.js'],
+    outfile: 'dist/codeblock-enhancer.js',
+  }),
+
+  build({
+    ...commonOptions,
+    format: 'esm',
+    entryPoints: ['src/code-toolbox.js'],
+    outfile: 'dist/code-toolbox.js',
   })
 ]).then(() => {
   console.log('\n✅ Build complete! Load the dist/ folder in Chrome.');

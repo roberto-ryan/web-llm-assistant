@@ -16,6 +16,7 @@ export const menuHTML = `
         <button class="menu-item" data-tool="export">Export Chat</button>
         <button class="menu-item" data-tool="templates">Message Templates</button>
         <button class="menu-item" data-tool="elements">Manage Elements</button>
+        <button class="menu-item" data-tool="toolbox">Code Toolbox</button>
       </div>
       
       <!-- Tool Panels -->
@@ -43,6 +44,14 @@ export const menuHTML = `
         </div>
         <button class="menu-item" id="clear-elements-btn">Clear All Elements</button>
         <button class="menu-item" id="refresh-elements-btn">Refresh List</button>
+      </div>
+      
+      <div class="tool-panel" id="tool-toolbox">
+        <h3>Code Toolbox</h3>
+        <p>Your saved code snippets for quick execution.</p>
+        <div id="toolbox-list">
+          <!-- Toolbox items will be populated here -->
+        </div>
       </div>
     </div>
   </div>
@@ -171,6 +180,10 @@ export class MenuManager {
     // If showing elements panel, refresh the list
     if (toolId === 'elements') {
       this.refreshElementsList();
+    }
+    // If showing toolbox panel, refresh the list
+    else if (toolId === 'toolbox') {
+      this.refreshToolboxList();
     }
   }
 
@@ -316,6 +329,18 @@ export class MenuManager {
     if (confirm(confirmMessage)) {
       window.elementPickerController?.deleteElement(elementId);
       this.refreshElementsList();
+    }
+  }
+
+  refreshToolboxList() {
+    const listContainer = document.getElementById('toolbox-list');
+    if (!listContainer) return;
+    
+    // Use the global toolbox UI if available
+    if (window.toolboxUI) {
+      window.toolboxUI.render(listContainer);
+    } else {
+      listContainer.innerHTML = '<p style="color: #999; font-style: italic;">Toolbox not initialized</p>';
     }
   }
 }
