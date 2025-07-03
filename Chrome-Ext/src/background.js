@@ -247,5 +247,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   } else if (request.action === 'elementSelected') {
     chrome.runtime.sendMessage(request);
     sendResponse({ success: true });
+  } else if (request.action === 'captureVisibleTab') {
+    chrome.tabs.captureVisibleTab(null, { format: 'png' }, (dataUrl) => {
+      sendResponse({ dataUrl });
+    });
+    // Indicate async response
+    return true;
   }
 });

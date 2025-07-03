@@ -10,6 +10,7 @@ const sendBtn = document.getElementById("send");
 const newChatBtn = document.getElementById("new-chat-btn");
 const elementPickerBtn = document.getElementById("element-picker-btn");
 const statusEl = document.getElementById("status");
+const cameraBtn = document.getElementById('camera-capture-btn');
 
 // Initialize menu manager
 const menuManager = new MenuManager(inputEl);
@@ -694,3 +695,79 @@ window.handleNewChat = handleNewChat;
 window.messages = messages;
 window.messagesDiv = messagesDiv;
 window.elementPickerController = elementPickerController;
+
+document.addEventListener('DOMContentLoaded', function() {
+  if (cameraBtn) {
+    cameraBtn.addEventListener('click', async function() {
+      console.log('Camera capture button clicked');
+      // Dynamically import regionSelector.js and trigger region selection
+      try {
+        const { selectRegion } = await import('./regionSelector.js');
+        const rect = await selectRegion();
+        console.log('Selected region:', rect);
+        // Request screenshot from background script
+        chrome.runtime.sendMessage({ action: 'captureVisibleTab' }, async (response) => {
+          if (response && response.dataUrl) {
+            // Crop the image to the selected region
+            const croppedDataUrl = await cropImageToRegion(response.dataUrl, rect);
+            console.log('Cropped region image data URL:', croppedDataUrl);
+            try {
+              const llmResponse = await sendImageToLLM(croppedDataUrl, "Describe this screenshot");
+              console.log('LLM response:', llmResponse);
+              addMessage(llmResponse.choices?.[0]?.message?.content || JSON.stringify(llmResponse), "assistant");
+            } catch (err) {
+              console.error('Failed to send image to LLM:', err);
+              addMessage(`❌ Failed to send image to LLM: ${err.message}`, "error");
+            }
+          } else {
+            console.warn('Failed to capture tab image');
+          }
+        });
+      } catch (err) {
+        console.warn('Region selection cancelled or failed:', err);
+      }
+    });
+  }
+});
+
+// Helper to crop a data URL image to a region
+async function cropImageToRegion(dataUrl, rect) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = function() {
+      const canvas = document.createElement('canvas');
+      canvas.width = rect.width;
+      canvas.height = rect.height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, rect.x, rect.y, rect.width, rect.height, 0, 0, rect.width, rect.height);
+      resolve(canvas.toDataURL('image/png'));
+    };
+    img.onerror = reject;
+    img.src = dataUrl;
+  });
+}
+
+async function sendImageToLLM(imageDataUrl, prompt = "") {
+  // Extract base64 from data URL
+  const base64Image = imageDataUrl.split(',')[1];
+  const requestBody = {
+    model: apiModel,
+    messages: [
+      { role: "user", content: prompt },
+      { role: "user", image: base64Image }
+    ]
+  };
+  const response = await fetch(apiEndpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(apiKey && { "Authorization": `Bearer ${apiKey}` })
+    },
+    body: JSON.stringify(requestBody)
+  });
+  if (!response.ok) {
+    throw new Error(`Image API error: ${response.status}`);
+  }
+  const data = await response.json();
+  return data;
+}
