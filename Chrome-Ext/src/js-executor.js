@@ -62,7 +62,10 @@ export class JSExecutor {
 ${pageContextInfo}
 
 ## Core Requirements:
-- Write only executable code, no explanations or comments
+- Write ONLY executable statements, NOT function declarations
+- Do NOT write: function() { ... } or async function() { ... }
+- Do NOT wrap code in functions - just write the statements directly
+- Example: document.body.style.backgroundColor = 'red'; return 'done';
 - The code will be wrapped in an async function automatically
 - You can use 'return' to return values from your code
 - You can use await for async operations
@@ -83,8 +86,14 @@ To interact with these elements, use standard DOM methods:
 - For delays: Use await new Promise(resolve => setTimeout(resolve, ms))
 - Return meaningful values when appropriate
 - NEVER import external scripts or libraries
+- WRITE DIRECT STATEMENTS, NOT FUNCTION DEFINITIONS
 
-IF YOU DEFINE A FUNCTION, MAKE SURE TO ACTUALLY CALL IT!`
+EXAMPLE GOOD CODE:
+document.body.style.backgroundColor = 'black';
+return 'Background changed to black';
+
+EXAMPLE BAD CODE:
+async function() { document.body.style.backgroundColor = 'black'; }`
       },
       { role: "user", content: enhancedPrompt }
     ];
@@ -101,6 +110,10 @@ IF YOU DEFINE A FUNCTION, MAKE SURE TO ACTUALLY CALL IT!`
     let code = response;
     const match = code.match(/```(?:js|javascript)?\n?([\s\S]*?)```/);
     if (match) code = match[1];
+    
+    // Fix common AI mistakes - remove function wrapper
+    code = code.replace(/^async\s+function\s*\(\s*\)\s*\{([\s\S]*)\}$/m, '$1');
+    code = code.replace(/^function\s*\(\s*\)\s*\{([\s\S]*)\}$/m, '$1');
     
     return code.trim();
   }
