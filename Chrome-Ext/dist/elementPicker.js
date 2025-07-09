@@ -1,4 +1,2327 @@
 (() => {
+  var __create = Object.create;
+  var __defProp = Object.defineProperty;
+  var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+  var __getOwnPropNames = Object.getOwnPropertyNames;
+  var __getProtoOf = Object.getPrototypeOf;
+  var __hasOwnProp = Object.prototype.hasOwnProperty;
+  var __require = /* @__PURE__ */ ((x) => typeof require !== "undefined" ? require : typeof Proxy !== "undefined" ? new Proxy(x, {
+    get: (a, b) => (typeof require !== "undefined" ? require : a)[b]
+  }) : x)(function(x) {
+    if (typeof require !== "undefined")
+      return require.apply(this, arguments);
+    throw Error('Dynamic require of "' + x + '" is not supported');
+  });
+  var __commonJS = (cb, mod) => function __require2() {
+    return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+  };
+  var __copyProps = (to, from, except, desc) => {
+    if (from && typeof from === "object" || typeof from === "function") {
+      for (let key of __getOwnPropNames(from))
+        if (!__hasOwnProp.call(to, key) && key !== except)
+          __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+    }
+    return to;
+  };
+  var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
+    // If the importer is in node compatibility mode or this is not an ESM
+    // file that has been converted to a CommonJS file using a Babel-
+    // compatible transform (i.e. "__esModule" has not been set), then set
+    // "default" to the CommonJS "module.exports" for node compatibility.
+    isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
+    mod
+  ));
+
+  // node_modules/localforage/dist/localforage.js
+  var require_localforage = __commonJS({
+    "node_modules/localforage/dist/localforage.js"(exports, module) {
+      (function(f) {
+        if (typeof exports === "object" && typeof module !== "undefined") {
+          module.exports = f();
+        } else if (typeof define === "function" && define.amd) {
+          define([], f);
+        } else {
+          var g;
+          if (typeof window !== "undefined") {
+            g = window;
+          } else if (typeof global !== "undefined") {
+            g = global;
+          } else if (typeof self !== "undefined") {
+            g = self;
+          } else {
+            g = this;
+          }
+          g.localforage = f();
+        }
+      })(function() {
+        var define2, module2, exports2;
+        return function e(t, n, r) {
+          function s(o2, u) {
+            if (!n[o2]) {
+              if (!t[o2]) {
+                var a = typeof __require == "function" && __require;
+                if (!u && a)
+                  return a(o2, true);
+                if (i)
+                  return i(o2, true);
+                var f = new Error("Cannot find module '" + o2 + "'");
+                throw f.code = "MODULE_NOT_FOUND", f;
+              }
+              var l = n[o2] = { exports: {} };
+              t[o2][0].call(l.exports, function(e2) {
+                var n2 = t[o2][1][e2];
+                return s(n2 ? n2 : e2);
+              }, l, l.exports, e, t, n, r);
+            }
+            return n[o2].exports;
+          }
+          var i = typeof __require == "function" && __require;
+          for (var o = 0; o < r.length; o++)
+            s(r[o]);
+          return s;
+        }({ 1: [function(_dereq_, module3, exports3) {
+          (function(global2) {
+            "use strict";
+            var Mutation = global2.MutationObserver || global2.WebKitMutationObserver;
+            var scheduleDrain;
+            {
+              if (Mutation) {
+                var called = 0;
+                var observer = new Mutation(nextTick);
+                var element = global2.document.createTextNode("");
+                observer.observe(element, {
+                  characterData: true
+                });
+                scheduleDrain = function() {
+                  element.data = called = ++called % 2;
+                };
+              } else if (!global2.setImmediate && typeof global2.MessageChannel !== "undefined") {
+                var channel = new global2.MessageChannel();
+                channel.port1.onmessage = nextTick;
+                scheduleDrain = function() {
+                  channel.port2.postMessage(0);
+                };
+              } else if ("document" in global2 && "onreadystatechange" in global2.document.createElement("script")) {
+                scheduleDrain = function() {
+                  var scriptEl = global2.document.createElement("script");
+                  scriptEl.onreadystatechange = function() {
+                    nextTick();
+                    scriptEl.onreadystatechange = null;
+                    scriptEl.parentNode.removeChild(scriptEl);
+                    scriptEl = null;
+                  };
+                  global2.document.documentElement.appendChild(scriptEl);
+                };
+              } else {
+                scheduleDrain = function() {
+                  setTimeout(nextTick, 0);
+                };
+              }
+            }
+            var draining;
+            var queue = [];
+            function nextTick() {
+              draining = true;
+              var i, oldQueue;
+              var len = queue.length;
+              while (len) {
+                oldQueue = queue;
+                queue = [];
+                i = -1;
+                while (++i < len) {
+                  oldQueue[i]();
+                }
+                len = queue.length;
+              }
+              draining = false;
+            }
+            module3.exports = immediate;
+            function immediate(task) {
+              if (queue.push(task) === 1 && !draining) {
+                scheduleDrain();
+              }
+            }
+          }).call(this, typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {});
+        }, {}], 2: [function(_dereq_, module3, exports3) {
+          "use strict";
+          var immediate = _dereq_(1);
+          function INTERNAL() {
+          }
+          var handlers = {};
+          var REJECTED = ["REJECTED"];
+          var FULFILLED = ["FULFILLED"];
+          var PENDING = ["PENDING"];
+          module3.exports = Promise2;
+          function Promise2(resolver) {
+            if (typeof resolver !== "function") {
+              throw new TypeError("resolver must be a function");
+            }
+            this.state = PENDING;
+            this.queue = [];
+            this.outcome = void 0;
+            if (resolver !== INTERNAL) {
+              safelyResolveThenable(this, resolver);
+            }
+          }
+          Promise2.prototype["catch"] = function(onRejected) {
+            return this.then(null, onRejected);
+          };
+          Promise2.prototype.then = function(onFulfilled, onRejected) {
+            if (typeof onFulfilled !== "function" && this.state === FULFILLED || typeof onRejected !== "function" && this.state === REJECTED) {
+              return this;
+            }
+            var promise = new this.constructor(INTERNAL);
+            if (this.state !== PENDING) {
+              var resolver = this.state === FULFILLED ? onFulfilled : onRejected;
+              unwrap(promise, resolver, this.outcome);
+            } else {
+              this.queue.push(new QueueItem(promise, onFulfilled, onRejected));
+            }
+            return promise;
+          };
+          function QueueItem(promise, onFulfilled, onRejected) {
+            this.promise = promise;
+            if (typeof onFulfilled === "function") {
+              this.onFulfilled = onFulfilled;
+              this.callFulfilled = this.otherCallFulfilled;
+            }
+            if (typeof onRejected === "function") {
+              this.onRejected = onRejected;
+              this.callRejected = this.otherCallRejected;
+            }
+          }
+          QueueItem.prototype.callFulfilled = function(value) {
+            handlers.resolve(this.promise, value);
+          };
+          QueueItem.prototype.otherCallFulfilled = function(value) {
+            unwrap(this.promise, this.onFulfilled, value);
+          };
+          QueueItem.prototype.callRejected = function(value) {
+            handlers.reject(this.promise, value);
+          };
+          QueueItem.prototype.otherCallRejected = function(value) {
+            unwrap(this.promise, this.onRejected, value);
+          };
+          function unwrap(promise, func, value) {
+            immediate(function() {
+              var returnValue;
+              try {
+                returnValue = func(value);
+              } catch (e) {
+                return handlers.reject(promise, e);
+              }
+              if (returnValue === promise) {
+                handlers.reject(promise, new TypeError("Cannot resolve promise with itself"));
+              } else {
+                handlers.resolve(promise, returnValue);
+              }
+            });
+          }
+          handlers.resolve = function(self2, value) {
+            var result = tryCatch(getThen, value);
+            if (result.status === "error") {
+              return handlers.reject(self2, result.value);
+            }
+            var thenable = result.value;
+            if (thenable) {
+              safelyResolveThenable(self2, thenable);
+            } else {
+              self2.state = FULFILLED;
+              self2.outcome = value;
+              var i = -1;
+              var len = self2.queue.length;
+              while (++i < len) {
+                self2.queue[i].callFulfilled(value);
+              }
+            }
+            return self2;
+          };
+          handlers.reject = function(self2, error) {
+            self2.state = REJECTED;
+            self2.outcome = error;
+            var i = -1;
+            var len = self2.queue.length;
+            while (++i < len) {
+              self2.queue[i].callRejected(error);
+            }
+            return self2;
+          };
+          function getThen(obj) {
+            var then = obj && obj.then;
+            if (obj && (typeof obj === "object" || typeof obj === "function") && typeof then === "function") {
+              return function appyThen() {
+                then.apply(obj, arguments);
+              };
+            }
+          }
+          function safelyResolveThenable(self2, thenable) {
+            var called = false;
+            function onError(value) {
+              if (called) {
+                return;
+              }
+              called = true;
+              handlers.reject(self2, value);
+            }
+            function onSuccess(value) {
+              if (called) {
+                return;
+              }
+              called = true;
+              handlers.resolve(self2, value);
+            }
+            function tryToUnwrap() {
+              thenable(onSuccess, onError);
+            }
+            var result = tryCatch(tryToUnwrap);
+            if (result.status === "error") {
+              onError(result.value);
+            }
+          }
+          function tryCatch(func, value) {
+            var out = {};
+            try {
+              out.value = func(value);
+              out.status = "success";
+            } catch (e) {
+              out.status = "error";
+              out.value = e;
+            }
+            return out;
+          }
+          Promise2.resolve = resolve;
+          function resolve(value) {
+            if (value instanceof this) {
+              return value;
+            }
+            return handlers.resolve(new this(INTERNAL), value);
+          }
+          Promise2.reject = reject;
+          function reject(reason) {
+            var promise = new this(INTERNAL);
+            return handlers.reject(promise, reason);
+          }
+          Promise2.all = all;
+          function all(iterable) {
+            var self2 = this;
+            if (Object.prototype.toString.call(iterable) !== "[object Array]") {
+              return this.reject(new TypeError("must be an array"));
+            }
+            var len = iterable.length;
+            var called = false;
+            if (!len) {
+              return this.resolve([]);
+            }
+            var values = new Array(len);
+            var resolved = 0;
+            var i = -1;
+            var promise = new this(INTERNAL);
+            while (++i < len) {
+              allResolver(iterable[i], i);
+            }
+            return promise;
+            function allResolver(value, i2) {
+              self2.resolve(value).then(resolveFromAll, function(error) {
+                if (!called) {
+                  called = true;
+                  handlers.reject(promise, error);
+                }
+              });
+              function resolveFromAll(outValue) {
+                values[i2] = outValue;
+                if (++resolved === len && !called) {
+                  called = true;
+                  handlers.resolve(promise, values);
+                }
+              }
+            }
+          }
+          Promise2.race = race;
+          function race(iterable) {
+            var self2 = this;
+            if (Object.prototype.toString.call(iterable) !== "[object Array]") {
+              return this.reject(new TypeError("must be an array"));
+            }
+            var len = iterable.length;
+            var called = false;
+            if (!len) {
+              return this.resolve([]);
+            }
+            var i = -1;
+            var promise = new this(INTERNAL);
+            while (++i < len) {
+              resolver(iterable[i]);
+            }
+            return promise;
+            function resolver(value) {
+              self2.resolve(value).then(function(response) {
+                if (!called) {
+                  called = true;
+                  handlers.resolve(promise, response);
+                }
+              }, function(error) {
+                if (!called) {
+                  called = true;
+                  handlers.reject(promise, error);
+                }
+              });
+            }
+          }
+        }, { "1": 1 }], 3: [function(_dereq_, module3, exports3) {
+          (function(global2) {
+            "use strict";
+            if (typeof global2.Promise !== "function") {
+              global2.Promise = _dereq_(2);
+            }
+          }).call(this, typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {});
+        }, { "2": 2 }], 4: [function(_dereq_, module3, exports3) {
+          "use strict";
+          var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function(obj) {
+            return typeof obj;
+          } : function(obj) {
+            return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj;
+          };
+          function _classCallCheck(instance, Constructor) {
+            if (!(instance instanceof Constructor)) {
+              throw new TypeError("Cannot call a class as a function");
+            }
+          }
+          function getIDB() {
+            try {
+              if (typeof indexedDB !== "undefined") {
+                return indexedDB;
+              }
+              if (typeof webkitIndexedDB !== "undefined") {
+                return webkitIndexedDB;
+              }
+              if (typeof mozIndexedDB !== "undefined") {
+                return mozIndexedDB;
+              }
+              if (typeof OIndexedDB !== "undefined") {
+                return OIndexedDB;
+              }
+              if (typeof msIndexedDB !== "undefined") {
+                return msIndexedDB;
+              }
+            } catch (e) {
+              return;
+            }
+          }
+          var idb = getIDB();
+          function isIndexedDBValid() {
+            try {
+              if (!idb || !idb.open) {
+                return false;
+              }
+              var isSafari = typeof openDatabase !== "undefined" && /(Safari|iPhone|iPad|iPod)/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent) && !/BlackBerry/.test(navigator.platform);
+              var hasFetch = typeof fetch === "function" && fetch.toString().indexOf("[native code") !== -1;
+              return (!isSafari || hasFetch) && typeof indexedDB !== "undefined" && // some outdated implementations of IDB that appear on Samsung
+              // and HTC Android devices <4.4 are missing IDBKeyRange
+              // See: https://github.com/mozilla/localForage/issues/128
+              // See: https://github.com/mozilla/localForage/issues/272
+              typeof IDBKeyRange !== "undefined";
+            } catch (e) {
+              return false;
+            }
+          }
+          function createBlob(parts, properties) {
+            parts = parts || [];
+            properties = properties || {};
+            try {
+              return new Blob(parts, properties);
+            } catch (e) {
+              if (e.name !== "TypeError") {
+                throw e;
+              }
+              var Builder = typeof BlobBuilder !== "undefined" ? BlobBuilder : typeof MSBlobBuilder !== "undefined" ? MSBlobBuilder : typeof MozBlobBuilder !== "undefined" ? MozBlobBuilder : WebKitBlobBuilder;
+              var builder = new Builder();
+              for (var i = 0; i < parts.length; i += 1) {
+                builder.append(parts[i]);
+              }
+              return builder.getBlob(properties.type);
+            }
+          }
+          if (typeof Promise === "undefined") {
+            _dereq_(3);
+          }
+          var Promise$1 = Promise;
+          function executeCallback(promise, callback) {
+            if (callback) {
+              promise.then(function(result) {
+                callback(null, result);
+              }, function(error) {
+                callback(error);
+              });
+            }
+          }
+          function executeTwoCallbacks(promise, callback, errorCallback) {
+            if (typeof callback === "function") {
+              promise.then(callback);
+            }
+            if (typeof errorCallback === "function") {
+              promise["catch"](errorCallback);
+            }
+          }
+          function normalizeKey(key2) {
+            if (typeof key2 !== "string") {
+              console.warn(key2 + " used as a key, but it is not a string.");
+              key2 = String(key2);
+            }
+            return key2;
+          }
+          function getCallback() {
+            if (arguments.length && typeof arguments[arguments.length - 1] === "function") {
+              return arguments[arguments.length - 1];
+            }
+          }
+          var DETECT_BLOB_SUPPORT_STORE = "local-forage-detect-blob-support";
+          var supportsBlobs = void 0;
+          var dbContexts = {};
+          var toString = Object.prototype.toString;
+          var READ_ONLY = "readonly";
+          var READ_WRITE = "readwrite";
+          function _binStringToArrayBuffer(bin) {
+            var length2 = bin.length;
+            var buf = new ArrayBuffer(length2);
+            var arr = new Uint8Array(buf);
+            for (var i = 0; i < length2; i++) {
+              arr[i] = bin.charCodeAt(i);
+            }
+            return buf;
+          }
+          function _checkBlobSupportWithoutCaching(idb2) {
+            return new Promise$1(function(resolve) {
+              var txn = idb2.transaction(DETECT_BLOB_SUPPORT_STORE, READ_WRITE);
+              var blob = createBlob([""]);
+              txn.objectStore(DETECT_BLOB_SUPPORT_STORE).put(blob, "key");
+              txn.onabort = function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                resolve(false);
+              };
+              txn.oncomplete = function() {
+                var matchedChrome = navigator.userAgent.match(/Chrome\/(\d+)/);
+                var matchedEdge = navigator.userAgent.match(/Edge\//);
+                resolve(matchedEdge || !matchedChrome || parseInt(matchedChrome[1], 10) >= 43);
+              };
+            })["catch"](function() {
+              return false;
+            });
+          }
+          function _checkBlobSupport(idb2) {
+            if (typeof supportsBlobs === "boolean") {
+              return Promise$1.resolve(supportsBlobs);
+            }
+            return _checkBlobSupportWithoutCaching(idb2).then(function(value) {
+              supportsBlobs = value;
+              return supportsBlobs;
+            });
+          }
+          function _deferReadiness(dbInfo) {
+            var dbContext = dbContexts[dbInfo.name];
+            var deferredOperation = {};
+            deferredOperation.promise = new Promise$1(function(resolve, reject) {
+              deferredOperation.resolve = resolve;
+              deferredOperation.reject = reject;
+            });
+            dbContext.deferredOperations.push(deferredOperation);
+            if (!dbContext.dbReady) {
+              dbContext.dbReady = deferredOperation.promise;
+            } else {
+              dbContext.dbReady = dbContext.dbReady.then(function() {
+                return deferredOperation.promise;
+              });
+            }
+          }
+          function _advanceReadiness(dbInfo) {
+            var dbContext = dbContexts[dbInfo.name];
+            var deferredOperation = dbContext.deferredOperations.pop();
+            if (deferredOperation) {
+              deferredOperation.resolve();
+              return deferredOperation.promise;
+            }
+          }
+          function _rejectReadiness(dbInfo, err) {
+            var dbContext = dbContexts[dbInfo.name];
+            var deferredOperation = dbContext.deferredOperations.pop();
+            if (deferredOperation) {
+              deferredOperation.reject(err);
+              return deferredOperation.promise;
+            }
+          }
+          function _getConnection(dbInfo, upgradeNeeded) {
+            return new Promise$1(function(resolve, reject) {
+              dbContexts[dbInfo.name] = dbContexts[dbInfo.name] || createDbContext();
+              if (dbInfo.db) {
+                if (upgradeNeeded) {
+                  _deferReadiness(dbInfo);
+                  dbInfo.db.close();
+                } else {
+                  return resolve(dbInfo.db);
+                }
+              }
+              var dbArgs = [dbInfo.name];
+              if (upgradeNeeded) {
+                dbArgs.push(dbInfo.version);
+              }
+              var openreq = idb.open.apply(idb, dbArgs);
+              if (upgradeNeeded) {
+                openreq.onupgradeneeded = function(e) {
+                  var db = openreq.result;
+                  try {
+                    db.createObjectStore(dbInfo.storeName);
+                    if (e.oldVersion <= 1) {
+                      db.createObjectStore(DETECT_BLOB_SUPPORT_STORE);
+                    }
+                  } catch (ex) {
+                    if (ex.name === "ConstraintError") {
+                      console.warn('The database "' + dbInfo.name + '" has been upgraded from version ' + e.oldVersion + " to version " + e.newVersion + ', but the storage "' + dbInfo.storeName + '" already exists.');
+                    } else {
+                      throw ex;
+                    }
+                  }
+                };
+              }
+              openreq.onerror = function(e) {
+                e.preventDefault();
+                reject(openreq.error);
+              };
+              openreq.onsuccess = function() {
+                var db = openreq.result;
+                db.onversionchange = function(e) {
+                  e.target.close();
+                };
+                resolve(db);
+                _advanceReadiness(dbInfo);
+              };
+            });
+          }
+          function _getOriginalConnection(dbInfo) {
+            return _getConnection(dbInfo, false);
+          }
+          function _getUpgradedConnection(dbInfo) {
+            return _getConnection(dbInfo, true);
+          }
+          function _isUpgradeNeeded(dbInfo, defaultVersion) {
+            if (!dbInfo.db) {
+              return true;
+            }
+            var isNewStore = !dbInfo.db.objectStoreNames.contains(dbInfo.storeName);
+            var isDowngrade = dbInfo.version < dbInfo.db.version;
+            var isUpgrade = dbInfo.version > dbInfo.db.version;
+            if (isDowngrade) {
+              if (dbInfo.version !== defaultVersion) {
+                console.warn('The database "' + dbInfo.name + `" can't be downgraded from version ` + dbInfo.db.version + " to version " + dbInfo.version + ".");
+              }
+              dbInfo.version = dbInfo.db.version;
+            }
+            if (isUpgrade || isNewStore) {
+              if (isNewStore) {
+                var incVersion = dbInfo.db.version + 1;
+                if (incVersion > dbInfo.version) {
+                  dbInfo.version = incVersion;
+                }
+              }
+              return true;
+            }
+            return false;
+          }
+          function _encodeBlob(blob) {
+            return new Promise$1(function(resolve, reject) {
+              var reader = new FileReader();
+              reader.onerror = reject;
+              reader.onloadend = function(e) {
+                var base64 = btoa(e.target.result || "");
+                resolve({
+                  __local_forage_encoded_blob: true,
+                  data: base64,
+                  type: blob.type
+                });
+              };
+              reader.readAsBinaryString(blob);
+            });
+          }
+          function _decodeBlob(encodedBlob) {
+            var arrayBuff = _binStringToArrayBuffer(atob(encodedBlob.data));
+            return createBlob([arrayBuff], { type: encodedBlob.type });
+          }
+          function _isEncodedBlob(value) {
+            return value && value.__local_forage_encoded_blob;
+          }
+          function _fullyReady(callback) {
+            var self2 = this;
+            var promise = self2._initReady().then(function() {
+              var dbContext = dbContexts[self2._dbInfo.name];
+              if (dbContext && dbContext.dbReady) {
+                return dbContext.dbReady;
+              }
+            });
+            executeTwoCallbacks(promise, callback, callback);
+            return promise;
+          }
+          function _tryReconnect(dbInfo) {
+            _deferReadiness(dbInfo);
+            var dbContext = dbContexts[dbInfo.name];
+            var forages = dbContext.forages;
+            for (var i = 0; i < forages.length; i++) {
+              var forage = forages[i];
+              if (forage._dbInfo.db) {
+                forage._dbInfo.db.close();
+                forage._dbInfo.db = null;
+              }
+            }
+            dbInfo.db = null;
+            return _getOriginalConnection(dbInfo).then(function(db) {
+              dbInfo.db = db;
+              if (_isUpgradeNeeded(dbInfo)) {
+                return _getUpgradedConnection(dbInfo);
+              }
+              return db;
+            }).then(function(db) {
+              dbInfo.db = dbContext.db = db;
+              for (var i2 = 0; i2 < forages.length; i2++) {
+                forages[i2]._dbInfo.db = db;
+              }
+            })["catch"](function(err) {
+              _rejectReadiness(dbInfo, err);
+              throw err;
+            });
+          }
+          function createTransaction(dbInfo, mode, callback, retries) {
+            if (retries === void 0) {
+              retries = 1;
+            }
+            try {
+              var tx = dbInfo.db.transaction(dbInfo.storeName, mode);
+              callback(null, tx);
+            } catch (err) {
+              if (retries > 0 && (!dbInfo.db || err.name === "InvalidStateError" || err.name === "NotFoundError")) {
+                return Promise$1.resolve().then(function() {
+                  if (!dbInfo.db || err.name === "NotFoundError" && !dbInfo.db.objectStoreNames.contains(dbInfo.storeName) && dbInfo.version <= dbInfo.db.version) {
+                    if (dbInfo.db) {
+                      dbInfo.version = dbInfo.db.version + 1;
+                    }
+                    return _getUpgradedConnection(dbInfo);
+                  }
+                }).then(function() {
+                  return _tryReconnect(dbInfo).then(function() {
+                    createTransaction(dbInfo, mode, callback, retries - 1);
+                  });
+                })["catch"](callback);
+              }
+              callback(err);
+            }
+          }
+          function createDbContext() {
+            return {
+              // Running localForages sharing a database.
+              forages: [],
+              // Shared database.
+              db: null,
+              // Database readiness (promise).
+              dbReady: null,
+              // Deferred operations on the database.
+              deferredOperations: []
+            };
+          }
+          function _initStorage(options) {
+            var self2 = this;
+            var dbInfo = {
+              db: null
+            };
+            if (options) {
+              for (var i in options) {
+                dbInfo[i] = options[i];
+              }
+            }
+            var dbContext = dbContexts[dbInfo.name];
+            if (!dbContext) {
+              dbContext = createDbContext();
+              dbContexts[dbInfo.name] = dbContext;
+            }
+            dbContext.forages.push(self2);
+            if (!self2._initReady) {
+              self2._initReady = self2.ready;
+              self2.ready = _fullyReady;
+            }
+            var initPromises = [];
+            function ignoreErrors() {
+              return Promise$1.resolve();
+            }
+            for (var j = 0; j < dbContext.forages.length; j++) {
+              var forage = dbContext.forages[j];
+              if (forage !== self2) {
+                initPromises.push(forage._initReady()["catch"](ignoreErrors));
+              }
+            }
+            var forages = dbContext.forages.slice(0);
+            return Promise$1.all(initPromises).then(function() {
+              dbInfo.db = dbContext.db;
+              return _getOriginalConnection(dbInfo);
+            }).then(function(db) {
+              dbInfo.db = db;
+              if (_isUpgradeNeeded(dbInfo, self2._defaultConfig.version)) {
+                return _getUpgradedConnection(dbInfo);
+              }
+              return db;
+            }).then(function(db) {
+              dbInfo.db = dbContext.db = db;
+              self2._dbInfo = dbInfo;
+              for (var k = 0; k < forages.length; k++) {
+                var forage2 = forages[k];
+                if (forage2 !== self2) {
+                  forage2._dbInfo.db = dbInfo.db;
+                  forage2._dbInfo.version = dbInfo.version;
+                }
+              }
+            });
+          }
+          function getItem(key2, callback) {
+            var self2 = this;
+            key2 = normalizeKey(key2);
+            var promise = new Promise$1(function(resolve, reject) {
+              self2.ready().then(function() {
+                createTransaction(self2._dbInfo, READ_ONLY, function(err, transaction) {
+                  if (err) {
+                    return reject(err);
+                  }
+                  try {
+                    var store = transaction.objectStore(self2._dbInfo.storeName);
+                    var req = store.get(key2);
+                    req.onsuccess = function() {
+                      var value = req.result;
+                      if (value === void 0) {
+                        value = null;
+                      }
+                      if (_isEncodedBlob(value)) {
+                        value = _decodeBlob(value);
+                      }
+                      resolve(value);
+                    };
+                    req.onerror = function() {
+                      reject(req.error);
+                    };
+                  } catch (e) {
+                    reject(e);
+                  }
+                });
+              })["catch"](reject);
+            });
+            executeCallback(promise, callback);
+            return promise;
+          }
+          function iterate(iterator, callback) {
+            var self2 = this;
+            var promise = new Promise$1(function(resolve, reject) {
+              self2.ready().then(function() {
+                createTransaction(self2._dbInfo, READ_ONLY, function(err, transaction) {
+                  if (err) {
+                    return reject(err);
+                  }
+                  try {
+                    var store = transaction.objectStore(self2._dbInfo.storeName);
+                    var req = store.openCursor();
+                    var iterationNumber = 1;
+                    req.onsuccess = function() {
+                      var cursor = req.result;
+                      if (cursor) {
+                        var value = cursor.value;
+                        if (_isEncodedBlob(value)) {
+                          value = _decodeBlob(value);
+                        }
+                        var result = iterator(value, cursor.key, iterationNumber++);
+                        if (result !== void 0) {
+                          resolve(result);
+                        } else {
+                          cursor["continue"]();
+                        }
+                      } else {
+                        resolve();
+                      }
+                    };
+                    req.onerror = function() {
+                      reject(req.error);
+                    };
+                  } catch (e) {
+                    reject(e);
+                  }
+                });
+              })["catch"](reject);
+            });
+            executeCallback(promise, callback);
+            return promise;
+          }
+          function setItem(key2, value, callback) {
+            var self2 = this;
+            key2 = normalizeKey(key2);
+            var promise = new Promise$1(function(resolve, reject) {
+              var dbInfo;
+              self2.ready().then(function() {
+                dbInfo = self2._dbInfo;
+                if (toString.call(value) === "[object Blob]") {
+                  return _checkBlobSupport(dbInfo.db).then(function(blobSupport) {
+                    if (blobSupport) {
+                      return value;
+                    }
+                    return _encodeBlob(value);
+                  });
+                }
+                return value;
+              }).then(function(value2) {
+                createTransaction(self2._dbInfo, READ_WRITE, function(err, transaction) {
+                  if (err) {
+                    return reject(err);
+                  }
+                  try {
+                    var store = transaction.objectStore(self2._dbInfo.storeName);
+                    if (value2 === null) {
+                      value2 = void 0;
+                    }
+                    var req = store.put(value2, key2);
+                    transaction.oncomplete = function() {
+                      if (value2 === void 0) {
+                        value2 = null;
+                      }
+                      resolve(value2);
+                    };
+                    transaction.onabort = transaction.onerror = function() {
+                      var err2 = req.error ? req.error : req.transaction.error;
+                      reject(err2);
+                    };
+                  } catch (e) {
+                    reject(e);
+                  }
+                });
+              })["catch"](reject);
+            });
+            executeCallback(promise, callback);
+            return promise;
+          }
+          function removeItem(key2, callback) {
+            var self2 = this;
+            key2 = normalizeKey(key2);
+            var promise = new Promise$1(function(resolve, reject) {
+              self2.ready().then(function() {
+                createTransaction(self2._dbInfo, READ_WRITE, function(err, transaction) {
+                  if (err) {
+                    return reject(err);
+                  }
+                  try {
+                    var store = transaction.objectStore(self2._dbInfo.storeName);
+                    var req = store["delete"](key2);
+                    transaction.oncomplete = function() {
+                      resolve();
+                    };
+                    transaction.onerror = function() {
+                      reject(req.error);
+                    };
+                    transaction.onabort = function() {
+                      var err2 = req.error ? req.error : req.transaction.error;
+                      reject(err2);
+                    };
+                  } catch (e) {
+                    reject(e);
+                  }
+                });
+              })["catch"](reject);
+            });
+            executeCallback(promise, callback);
+            return promise;
+          }
+          function clear2(callback) {
+            var self2 = this;
+            var promise = new Promise$1(function(resolve, reject) {
+              self2.ready().then(function() {
+                createTransaction(self2._dbInfo, READ_WRITE, function(err, transaction) {
+                  if (err) {
+                    return reject(err);
+                  }
+                  try {
+                    var store = transaction.objectStore(self2._dbInfo.storeName);
+                    var req = store.clear();
+                    transaction.oncomplete = function() {
+                      resolve();
+                    };
+                    transaction.onabort = transaction.onerror = function() {
+                      var err2 = req.error ? req.error : req.transaction.error;
+                      reject(err2);
+                    };
+                  } catch (e) {
+                    reject(e);
+                  }
+                });
+              })["catch"](reject);
+            });
+            executeCallback(promise, callback);
+            return promise;
+          }
+          function length(callback) {
+            var self2 = this;
+            var promise = new Promise$1(function(resolve, reject) {
+              self2.ready().then(function() {
+                createTransaction(self2._dbInfo, READ_ONLY, function(err, transaction) {
+                  if (err) {
+                    return reject(err);
+                  }
+                  try {
+                    var store = transaction.objectStore(self2._dbInfo.storeName);
+                    var req = store.count();
+                    req.onsuccess = function() {
+                      resolve(req.result);
+                    };
+                    req.onerror = function() {
+                      reject(req.error);
+                    };
+                  } catch (e) {
+                    reject(e);
+                  }
+                });
+              })["catch"](reject);
+            });
+            executeCallback(promise, callback);
+            return promise;
+          }
+          function key(n, callback) {
+            var self2 = this;
+            var promise = new Promise$1(function(resolve, reject) {
+              if (n < 0) {
+                resolve(null);
+                return;
+              }
+              self2.ready().then(function() {
+                createTransaction(self2._dbInfo, READ_ONLY, function(err, transaction) {
+                  if (err) {
+                    return reject(err);
+                  }
+                  try {
+                    var store = transaction.objectStore(self2._dbInfo.storeName);
+                    var advanced = false;
+                    var req = store.openKeyCursor();
+                    req.onsuccess = function() {
+                      var cursor = req.result;
+                      if (!cursor) {
+                        resolve(null);
+                        return;
+                      }
+                      if (n === 0) {
+                        resolve(cursor.key);
+                      } else {
+                        if (!advanced) {
+                          advanced = true;
+                          cursor.advance(n);
+                        } else {
+                          resolve(cursor.key);
+                        }
+                      }
+                    };
+                    req.onerror = function() {
+                      reject(req.error);
+                    };
+                  } catch (e) {
+                    reject(e);
+                  }
+                });
+              })["catch"](reject);
+            });
+            executeCallback(promise, callback);
+            return promise;
+          }
+          function keys(callback) {
+            var self2 = this;
+            var promise = new Promise$1(function(resolve, reject) {
+              self2.ready().then(function() {
+                createTransaction(self2._dbInfo, READ_ONLY, function(err, transaction) {
+                  if (err) {
+                    return reject(err);
+                  }
+                  try {
+                    var store = transaction.objectStore(self2._dbInfo.storeName);
+                    var req = store.openKeyCursor();
+                    var keys2 = [];
+                    req.onsuccess = function() {
+                      var cursor = req.result;
+                      if (!cursor) {
+                        resolve(keys2);
+                        return;
+                      }
+                      keys2.push(cursor.key);
+                      cursor["continue"]();
+                    };
+                    req.onerror = function() {
+                      reject(req.error);
+                    };
+                  } catch (e) {
+                    reject(e);
+                  }
+                });
+              })["catch"](reject);
+            });
+            executeCallback(promise, callback);
+            return promise;
+          }
+          function dropInstance(options, callback) {
+            callback = getCallback.apply(this, arguments);
+            var currentConfig = this.config();
+            options = typeof options !== "function" && options || {};
+            if (!options.name) {
+              options.name = options.name || currentConfig.name;
+              options.storeName = options.storeName || currentConfig.storeName;
+            }
+            var self2 = this;
+            var promise;
+            if (!options.name) {
+              promise = Promise$1.reject("Invalid arguments");
+            } else {
+              var isCurrentDb = options.name === currentConfig.name && self2._dbInfo.db;
+              var dbPromise = isCurrentDb ? Promise$1.resolve(self2._dbInfo.db) : _getOriginalConnection(options).then(function(db) {
+                var dbContext = dbContexts[options.name];
+                var forages = dbContext.forages;
+                dbContext.db = db;
+                for (var i = 0; i < forages.length; i++) {
+                  forages[i]._dbInfo.db = db;
+                }
+                return db;
+              });
+              if (!options.storeName) {
+                promise = dbPromise.then(function(db) {
+                  _deferReadiness(options);
+                  var dbContext = dbContexts[options.name];
+                  var forages = dbContext.forages;
+                  db.close();
+                  for (var i = 0; i < forages.length; i++) {
+                    var forage = forages[i];
+                    forage._dbInfo.db = null;
+                  }
+                  var dropDBPromise = new Promise$1(function(resolve, reject) {
+                    var req = idb.deleteDatabase(options.name);
+                    req.onerror = function() {
+                      var db2 = req.result;
+                      if (db2) {
+                        db2.close();
+                      }
+                      reject(req.error);
+                    };
+                    req.onblocked = function() {
+                      console.warn('dropInstance blocked for database "' + options.name + '" until all open connections are closed');
+                    };
+                    req.onsuccess = function() {
+                      var db2 = req.result;
+                      if (db2) {
+                        db2.close();
+                      }
+                      resolve(db2);
+                    };
+                  });
+                  return dropDBPromise.then(function(db2) {
+                    dbContext.db = db2;
+                    for (var i2 = 0; i2 < forages.length; i2++) {
+                      var _forage = forages[i2];
+                      _advanceReadiness(_forage._dbInfo);
+                    }
+                  })["catch"](function(err) {
+                    (_rejectReadiness(options, err) || Promise$1.resolve())["catch"](function() {
+                    });
+                    throw err;
+                  });
+                });
+              } else {
+                promise = dbPromise.then(function(db) {
+                  if (!db.objectStoreNames.contains(options.storeName)) {
+                    return;
+                  }
+                  var newVersion = db.version + 1;
+                  _deferReadiness(options);
+                  var dbContext = dbContexts[options.name];
+                  var forages = dbContext.forages;
+                  db.close();
+                  for (var i = 0; i < forages.length; i++) {
+                    var forage = forages[i];
+                    forage._dbInfo.db = null;
+                    forage._dbInfo.version = newVersion;
+                  }
+                  var dropObjectPromise = new Promise$1(function(resolve, reject) {
+                    var req = idb.open(options.name, newVersion);
+                    req.onerror = function(err) {
+                      var db2 = req.result;
+                      db2.close();
+                      reject(err);
+                    };
+                    req.onupgradeneeded = function() {
+                      var db2 = req.result;
+                      db2.deleteObjectStore(options.storeName);
+                    };
+                    req.onsuccess = function() {
+                      var db2 = req.result;
+                      db2.close();
+                      resolve(db2);
+                    };
+                  });
+                  return dropObjectPromise.then(function(db2) {
+                    dbContext.db = db2;
+                    for (var j = 0; j < forages.length; j++) {
+                      var _forage2 = forages[j];
+                      _forage2._dbInfo.db = db2;
+                      _advanceReadiness(_forage2._dbInfo);
+                    }
+                  })["catch"](function(err) {
+                    (_rejectReadiness(options, err) || Promise$1.resolve())["catch"](function() {
+                    });
+                    throw err;
+                  });
+                });
+              }
+            }
+            executeCallback(promise, callback);
+            return promise;
+          }
+          var asyncStorage = {
+            _driver: "asyncStorage",
+            _initStorage,
+            _support: isIndexedDBValid(),
+            iterate,
+            getItem,
+            setItem,
+            removeItem,
+            clear: clear2,
+            length,
+            key,
+            keys,
+            dropInstance
+          };
+          function isWebSQLValid() {
+            return typeof openDatabase === "function";
+          }
+          var BASE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+          var BLOB_TYPE_PREFIX = "~~local_forage_type~";
+          var BLOB_TYPE_PREFIX_REGEX = /^~~local_forage_type~([^~]+)~/;
+          var SERIALIZED_MARKER = "__lfsc__:";
+          var SERIALIZED_MARKER_LENGTH = SERIALIZED_MARKER.length;
+          var TYPE_ARRAYBUFFER = "arbf";
+          var TYPE_BLOB = "blob";
+          var TYPE_INT8ARRAY = "si08";
+          var TYPE_UINT8ARRAY = "ui08";
+          var TYPE_UINT8CLAMPEDARRAY = "uic8";
+          var TYPE_INT16ARRAY = "si16";
+          var TYPE_INT32ARRAY = "si32";
+          var TYPE_UINT16ARRAY = "ur16";
+          var TYPE_UINT32ARRAY = "ui32";
+          var TYPE_FLOAT32ARRAY = "fl32";
+          var TYPE_FLOAT64ARRAY = "fl64";
+          var TYPE_SERIALIZED_MARKER_LENGTH = SERIALIZED_MARKER_LENGTH + TYPE_ARRAYBUFFER.length;
+          var toString$1 = Object.prototype.toString;
+          function stringToBuffer(serializedString) {
+            var bufferLength = serializedString.length * 0.75;
+            var len = serializedString.length;
+            var i;
+            var p = 0;
+            var encoded1, encoded2, encoded3, encoded4;
+            if (serializedString[serializedString.length - 1] === "=") {
+              bufferLength--;
+              if (serializedString[serializedString.length - 2] === "=") {
+                bufferLength--;
+              }
+            }
+            var buffer = new ArrayBuffer(bufferLength);
+            var bytes = new Uint8Array(buffer);
+            for (i = 0; i < len; i += 4) {
+              encoded1 = BASE_CHARS.indexOf(serializedString[i]);
+              encoded2 = BASE_CHARS.indexOf(serializedString[i + 1]);
+              encoded3 = BASE_CHARS.indexOf(serializedString[i + 2]);
+              encoded4 = BASE_CHARS.indexOf(serializedString[i + 3]);
+              bytes[p++] = encoded1 << 2 | encoded2 >> 4;
+              bytes[p++] = (encoded2 & 15) << 4 | encoded3 >> 2;
+              bytes[p++] = (encoded3 & 3) << 6 | encoded4 & 63;
+            }
+            return buffer;
+          }
+          function bufferToString(buffer) {
+            var bytes = new Uint8Array(buffer);
+            var base64String = "";
+            var i;
+            for (i = 0; i < bytes.length; i += 3) {
+              base64String += BASE_CHARS[bytes[i] >> 2];
+              base64String += BASE_CHARS[(bytes[i] & 3) << 4 | bytes[i + 1] >> 4];
+              base64String += BASE_CHARS[(bytes[i + 1] & 15) << 2 | bytes[i + 2] >> 6];
+              base64String += BASE_CHARS[bytes[i + 2] & 63];
+            }
+            if (bytes.length % 3 === 2) {
+              base64String = base64String.substring(0, base64String.length - 1) + "=";
+            } else if (bytes.length % 3 === 1) {
+              base64String = base64String.substring(0, base64String.length - 2) + "==";
+            }
+            return base64String;
+          }
+          function serialize(value, callback) {
+            var valueType = "";
+            if (value) {
+              valueType = toString$1.call(value);
+            }
+            if (value && (valueType === "[object ArrayBuffer]" || value.buffer && toString$1.call(value.buffer) === "[object ArrayBuffer]")) {
+              var buffer;
+              var marker = SERIALIZED_MARKER;
+              if (value instanceof ArrayBuffer) {
+                buffer = value;
+                marker += TYPE_ARRAYBUFFER;
+              } else {
+                buffer = value.buffer;
+                if (valueType === "[object Int8Array]") {
+                  marker += TYPE_INT8ARRAY;
+                } else if (valueType === "[object Uint8Array]") {
+                  marker += TYPE_UINT8ARRAY;
+                } else if (valueType === "[object Uint8ClampedArray]") {
+                  marker += TYPE_UINT8CLAMPEDARRAY;
+                } else if (valueType === "[object Int16Array]") {
+                  marker += TYPE_INT16ARRAY;
+                } else if (valueType === "[object Uint16Array]") {
+                  marker += TYPE_UINT16ARRAY;
+                } else if (valueType === "[object Int32Array]") {
+                  marker += TYPE_INT32ARRAY;
+                } else if (valueType === "[object Uint32Array]") {
+                  marker += TYPE_UINT32ARRAY;
+                } else if (valueType === "[object Float32Array]") {
+                  marker += TYPE_FLOAT32ARRAY;
+                } else if (valueType === "[object Float64Array]") {
+                  marker += TYPE_FLOAT64ARRAY;
+                } else {
+                  callback(new Error("Failed to get type for BinaryArray"));
+                }
+              }
+              callback(marker + bufferToString(buffer));
+            } else if (valueType === "[object Blob]") {
+              var fileReader = new FileReader();
+              fileReader.onload = function() {
+                var str = BLOB_TYPE_PREFIX + value.type + "~" + bufferToString(this.result);
+                callback(SERIALIZED_MARKER + TYPE_BLOB + str);
+              };
+              fileReader.readAsArrayBuffer(value);
+            } else {
+              try {
+                callback(JSON.stringify(value));
+              } catch (e) {
+                console.error("Couldn't convert value into a JSON string: ", value);
+                callback(null, e);
+              }
+            }
+          }
+          function deserialize(value) {
+            if (value.substring(0, SERIALIZED_MARKER_LENGTH) !== SERIALIZED_MARKER) {
+              return JSON.parse(value);
+            }
+            var serializedString = value.substring(TYPE_SERIALIZED_MARKER_LENGTH);
+            var type = value.substring(SERIALIZED_MARKER_LENGTH, TYPE_SERIALIZED_MARKER_LENGTH);
+            var blobType;
+            if (type === TYPE_BLOB && BLOB_TYPE_PREFIX_REGEX.test(serializedString)) {
+              var matcher = serializedString.match(BLOB_TYPE_PREFIX_REGEX);
+              blobType = matcher[1];
+              serializedString = serializedString.substring(matcher[0].length);
+            }
+            var buffer = stringToBuffer(serializedString);
+            switch (type) {
+              case TYPE_ARRAYBUFFER:
+                return buffer;
+              case TYPE_BLOB:
+                return createBlob([buffer], { type: blobType });
+              case TYPE_INT8ARRAY:
+                return new Int8Array(buffer);
+              case TYPE_UINT8ARRAY:
+                return new Uint8Array(buffer);
+              case TYPE_UINT8CLAMPEDARRAY:
+                return new Uint8ClampedArray(buffer);
+              case TYPE_INT16ARRAY:
+                return new Int16Array(buffer);
+              case TYPE_UINT16ARRAY:
+                return new Uint16Array(buffer);
+              case TYPE_INT32ARRAY:
+                return new Int32Array(buffer);
+              case TYPE_UINT32ARRAY:
+                return new Uint32Array(buffer);
+              case TYPE_FLOAT32ARRAY:
+                return new Float32Array(buffer);
+              case TYPE_FLOAT64ARRAY:
+                return new Float64Array(buffer);
+              default:
+                throw new Error("Unkown type: " + type);
+            }
+          }
+          var localforageSerializer = {
+            serialize,
+            deserialize,
+            stringToBuffer,
+            bufferToString
+          };
+          function createDbTable(t, dbInfo, callback, errorCallback) {
+            t.executeSql("CREATE TABLE IF NOT EXISTS " + dbInfo.storeName + " (id INTEGER PRIMARY KEY, key unique, value)", [], callback, errorCallback);
+          }
+          function _initStorage$1(options) {
+            var self2 = this;
+            var dbInfo = {
+              db: null
+            };
+            if (options) {
+              for (var i in options) {
+                dbInfo[i] = typeof options[i] !== "string" ? options[i].toString() : options[i];
+              }
+            }
+            var dbInfoPromise = new Promise$1(function(resolve, reject) {
+              try {
+                dbInfo.db = openDatabase(dbInfo.name, String(dbInfo.version), dbInfo.description, dbInfo.size);
+              } catch (e) {
+                return reject(e);
+              }
+              dbInfo.db.transaction(function(t) {
+                createDbTable(t, dbInfo, function() {
+                  self2._dbInfo = dbInfo;
+                  resolve();
+                }, function(t2, error) {
+                  reject(error);
+                });
+              }, reject);
+            });
+            dbInfo.serializer = localforageSerializer;
+            return dbInfoPromise;
+          }
+          function tryExecuteSql(t, dbInfo, sqlStatement, args, callback, errorCallback) {
+            t.executeSql(sqlStatement, args, callback, function(t2, error) {
+              if (error.code === error.SYNTAX_ERR) {
+                t2.executeSql("SELECT name FROM sqlite_master WHERE type='table' AND name = ?", [dbInfo.storeName], function(t3, results) {
+                  if (!results.rows.length) {
+                    createDbTable(t3, dbInfo, function() {
+                      t3.executeSql(sqlStatement, args, callback, errorCallback);
+                    }, errorCallback);
+                  } else {
+                    errorCallback(t3, error);
+                  }
+                }, errorCallback);
+              } else {
+                errorCallback(t2, error);
+              }
+            }, errorCallback);
+          }
+          function getItem$1(key2, callback) {
+            var self2 = this;
+            key2 = normalizeKey(key2);
+            var promise = new Promise$1(function(resolve, reject) {
+              self2.ready().then(function() {
+                var dbInfo = self2._dbInfo;
+                dbInfo.db.transaction(function(t) {
+                  tryExecuteSql(t, dbInfo, "SELECT * FROM " + dbInfo.storeName + " WHERE key = ? LIMIT 1", [key2], function(t2, results) {
+                    var result = results.rows.length ? results.rows.item(0).value : null;
+                    if (result) {
+                      result = dbInfo.serializer.deserialize(result);
+                    }
+                    resolve(result);
+                  }, function(t2, error) {
+                    reject(error);
+                  });
+                });
+              })["catch"](reject);
+            });
+            executeCallback(promise, callback);
+            return promise;
+          }
+          function iterate$1(iterator, callback) {
+            var self2 = this;
+            var promise = new Promise$1(function(resolve, reject) {
+              self2.ready().then(function() {
+                var dbInfo = self2._dbInfo;
+                dbInfo.db.transaction(function(t) {
+                  tryExecuteSql(t, dbInfo, "SELECT * FROM " + dbInfo.storeName, [], function(t2, results) {
+                    var rows = results.rows;
+                    var length2 = rows.length;
+                    for (var i = 0; i < length2; i++) {
+                      var item = rows.item(i);
+                      var result = item.value;
+                      if (result) {
+                        result = dbInfo.serializer.deserialize(result);
+                      }
+                      result = iterator(result, item.key, i + 1);
+                      if (result !== void 0) {
+                        resolve(result);
+                        return;
+                      }
+                    }
+                    resolve();
+                  }, function(t2, error) {
+                    reject(error);
+                  });
+                });
+              })["catch"](reject);
+            });
+            executeCallback(promise, callback);
+            return promise;
+          }
+          function _setItem(key2, value, callback, retriesLeft) {
+            var self2 = this;
+            key2 = normalizeKey(key2);
+            var promise = new Promise$1(function(resolve, reject) {
+              self2.ready().then(function() {
+                if (value === void 0) {
+                  value = null;
+                }
+                var originalValue = value;
+                var dbInfo = self2._dbInfo;
+                dbInfo.serializer.serialize(value, function(value2, error) {
+                  if (error) {
+                    reject(error);
+                  } else {
+                    dbInfo.db.transaction(function(t) {
+                      tryExecuteSql(t, dbInfo, "INSERT OR REPLACE INTO " + dbInfo.storeName + " (key, value) VALUES (?, ?)", [key2, value2], function() {
+                        resolve(originalValue);
+                      }, function(t2, error2) {
+                        reject(error2);
+                      });
+                    }, function(sqlError) {
+                      if (sqlError.code === sqlError.QUOTA_ERR) {
+                        if (retriesLeft > 0) {
+                          resolve(_setItem.apply(self2, [key2, originalValue, callback, retriesLeft - 1]));
+                          return;
+                        }
+                        reject(sqlError);
+                      }
+                    });
+                  }
+                });
+              })["catch"](reject);
+            });
+            executeCallback(promise, callback);
+            return promise;
+          }
+          function setItem$1(key2, value, callback) {
+            return _setItem.apply(this, [key2, value, callback, 1]);
+          }
+          function removeItem$1(key2, callback) {
+            var self2 = this;
+            key2 = normalizeKey(key2);
+            var promise = new Promise$1(function(resolve, reject) {
+              self2.ready().then(function() {
+                var dbInfo = self2._dbInfo;
+                dbInfo.db.transaction(function(t) {
+                  tryExecuteSql(t, dbInfo, "DELETE FROM " + dbInfo.storeName + " WHERE key = ?", [key2], function() {
+                    resolve();
+                  }, function(t2, error) {
+                    reject(error);
+                  });
+                });
+              })["catch"](reject);
+            });
+            executeCallback(promise, callback);
+            return promise;
+          }
+          function clear$1(callback) {
+            var self2 = this;
+            var promise = new Promise$1(function(resolve, reject) {
+              self2.ready().then(function() {
+                var dbInfo = self2._dbInfo;
+                dbInfo.db.transaction(function(t) {
+                  tryExecuteSql(t, dbInfo, "DELETE FROM " + dbInfo.storeName, [], function() {
+                    resolve();
+                  }, function(t2, error) {
+                    reject(error);
+                  });
+                });
+              })["catch"](reject);
+            });
+            executeCallback(promise, callback);
+            return promise;
+          }
+          function length$1(callback) {
+            var self2 = this;
+            var promise = new Promise$1(function(resolve, reject) {
+              self2.ready().then(function() {
+                var dbInfo = self2._dbInfo;
+                dbInfo.db.transaction(function(t) {
+                  tryExecuteSql(t, dbInfo, "SELECT COUNT(key) as c FROM " + dbInfo.storeName, [], function(t2, results) {
+                    var result = results.rows.item(0).c;
+                    resolve(result);
+                  }, function(t2, error) {
+                    reject(error);
+                  });
+                });
+              })["catch"](reject);
+            });
+            executeCallback(promise, callback);
+            return promise;
+          }
+          function key$1(n, callback) {
+            var self2 = this;
+            var promise = new Promise$1(function(resolve, reject) {
+              self2.ready().then(function() {
+                var dbInfo = self2._dbInfo;
+                dbInfo.db.transaction(function(t) {
+                  tryExecuteSql(t, dbInfo, "SELECT key FROM " + dbInfo.storeName + " WHERE id = ? LIMIT 1", [n + 1], function(t2, results) {
+                    var result = results.rows.length ? results.rows.item(0).key : null;
+                    resolve(result);
+                  }, function(t2, error) {
+                    reject(error);
+                  });
+                });
+              })["catch"](reject);
+            });
+            executeCallback(promise, callback);
+            return promise;
+          }
+          function keys$1(callback) {
+            var self2 = this;
+            var promise = new Promise$1(function(resolve, reject) {
+              self2.ready().then(function() {
+                var dbInfo = self2._dbInfo;
+                dbInfo.db.transaction(function(t) {
+                  tryExecuteSql(t, dbInfo, "SELECT key FROM " + dbInfo.storeName, [], function(t2, results) {
+                    var keys2 = [];
+                    for (var i = 0; i < results.rows.length; i++) {
+                      keys2.push(results.rows.item(i).key);
+                    }
+                    resolve(keys2);
+                  }, function(t2, error) {
+                    reject(error);
+                  });
+                });
+              })["catch"](reject);
+            });
+            executeCallback(promise, callback);
+            return promise;
+          }
+          function getAllStoreNames(db) {
+            return new Promise$1(function(resolve, reject) {
+              db.transaction(function(t) {
+                t.executeSql("SELECT name FROM sqlite_master WHERE type='table' AND name <> '__WebKitDatabaseInfoTable__'", [], function(t2, results) {
+                  var storeNames = [];
+                  for (var i = 0; i < results.rows.length; i++) {
+                    storeNames.push(results.rows.item(i).name);
+                  }
+                  resolve({
+                    db,
+                    storeNames
+                  });
+                }, function(t2, error) {
+                  reject(error);
+                });
+              }, function(sqlError) {
+                reject(sqlError);
+              });
+            });
+          }
+          function dropInstance$1(options, callback) {
+            callback = getCallback.apply(this, arguments);
+            var currentConfig = this.config();
+            options = typeof options !== "function" && options || {};
+            if (!options.name) {
+              options.name = options.name || currentConfig.name;
+              options.storeName = options.storeName || currentConfig.storeName;
+            }
+            var self2 = this;
+            var promise;
+            if (!options.name) {
+              promise = Promise$1.reject("Invalid arguments");
+            } else {
+              promise = new Promise$1(function(resolve) {
+                var db;
+                if (options.name === currentConfig.name) {
+                  db = self2._dbInfo.db;
+                } else {
+                  db = openDatabase(options.name, "", "", 0);
+                }
+                if (!options.storeName) {
+                  resolve(getAllStoreNames(db));
+                } else {
+                  resolve({
+                    db,
+                    storeNames: [options.storeName]
+                  });
+                }
+              }).then(function(operationInfo) {
+                return new Promise$1(function(resolve, reject) {
+                  operationInfo.db.transaction(function(t) {
+                    function dropTable(storeName) {
+                      return new Promise$1(function(resolve2, reject2) {
+                        t.executeSql("DROP TABLE IF EXISTS " + storeName, [], function() {
+                          resolve2();
+                        }, function(t2, error) {
+                          reject2(error);
+                        });
+                      });
+                    }
+                    var operations = [];
+                    for (var i = 0, len = operationInfo.storeNames.length; i < len; i++) {
+                      operations.push(dropTable(operationInfo.storeNames[i]));
+                    }
+                    Promise$1.all(operations).then(function() {
+                      resolve();
+                    })["catch"](function(e) {
+                      reject(e);
+                    });
+                  }, function(sqlError) {
+                    reject(sqlError);
+                  });
+                });
+              });
+            }
+            executeCallback(promise, callback);
+            return promise;
+          }
+          var webSQLStorage = {
+            _driver: "webSQLStorage",
+            _initStorage: _initStorage$1,
+            _support: isWebSQLValid(),
+            iterate: iterate$1,
+            getItem: getItem$1,
+            setItem: setItem$1,
+            removeItem: removeItem$1,
+            clear: clear$1,
+            length: length$1,
+            key: key$1,
+            keys: keys$1,
+            dropInstance: dropInstance$1
+          };
+          function isLocalStorageValid() {
+            try {
+              return typeof localStorage !== "undefined" && "setItem" in localStorage && // in IE8 typeof localStorage.setItem === 'object'
+              !!localStorage.setItem;
+            } catch (e) {
+              return false;
+            }
+          }
+          function _getKeyPrefix(options, defaultConfig) {
+            var keyPrefix = options.name + "/";
+            if (options.storeName !== defaultConfig.storeName) {
+              keyPrefix += options.storeName + "/";
+            }
+            return keyPrefix;
+          }
+          function checkIfLocalStorageThrows() {
+            var localStorageTestKey = "_localforage_support_test";
+            try {
+              localStorage.setItem(localStorageTestKey, true);
+              localStorage.removeItem(localStorageTestKey);
+              return false;
+            } catch (e) {
+              return true;
+            }
+          }
+          function _isLocalStorageUsable() {
+            return !checkIfLocalStorageThrows() || localStorage.length > 0;
+          }
+          function _initStorage$2(options) {
+            var self2 = this;
+            var dbInfo = {};
+            if (options) {
+              for (var i in options) {
+                dbInfo[i] = options[i];
+              }
+            }
+            dbInfo.keyPrefix = _getKeyPrefix(options, self2._defaultConfig);
+            if (!_isLocalStorageUsable()) {
+              return Promise$1.reject();
+            }
+            self2._dbInfo = dbInfo;
+            dbInfo.serializer = localforageSerializer;
+            return Promise$1.resolve();
+          }
+          function clear$2(callback) {
+            var self2 = this;
+            var promise = self2.ready().then(function() {
+              var keyPrefix = self2._dbInfo.keyPrefix;
+              for (var i = localStorage.length - 1; i >= 0; i--) {
+                var key2 = localStorage.key(i);
+                if (key2.indexOf(keyPrefix) === 0) {
+                  localStorage.removeItem(key2);
+                }
+              }
+            });
+            executeCallback(promise, callback);
+            return promise;
+          }
+          function getItem$2(key2, callback) {
+            var self2 = this;
+            key2 = normalizeKey(key2);
+            var promise = self2.ready().then(function() {
+              var dbInfo = self2._dbInfo;
+              var result = localStorage.getItem(dbInfo.keyPrefix + key2);
+              if (result) {
+                result = dbInfo.serializer.deserialize(result);
+              }
+              return result;
+            });
+            executeCallback(promise, callback);
+            return promise;
+          }
+          function iterate$2(iterator, callback) {
+            var self2 = this;
+            var promise = self2.ready().then(function() {
+              var dbInfo = self2._dbInfo;
+              var keyPrefix = dbInfo.keyPrefix;
+              var keyPrefixLength = keyPrefix.length;
+              var length2 = localStorage.length;
+              var iterationNumber = 1;
+              for (var i = 0; i < length2; i++) {
+                var key2 = localStorage.key(i);
+                if (key2.indexOf(keyPrefix) !== 0) {
+                  continue;
+                }
+                var value = localStorage.getItem(key2);
+                if (value) {
+                  value = dbInfo.serializer.deserialize(value);
+                }
+                value = iterator(value, key2.substring(keyPrefixLength), iterationNumber++);
+                if (value !== void 0) {
+                  return value;
+                }
+              }
+            });
+            executeCallback(promise, callback);
+            return promise;
+          }
+          function key$2(n, callback) {
+            var self2 = this;
+            var promise = self2.ready().then(function() {
+              var dbInfo = self2._dbInfo;
+              var result;
+              try {
+                result = localStorage.key(n);
+              } catch (error) {
+                result = null;
+              }
+              if (result) {
+                result = result.substring(dbInfo.keyPrefix.length);
+              }
+              return result;
+            });
+            executeCallback(promise, callback);
+            return promise;
+          }
+          function keys$2(callback) {
+            var self2 = this;
+            var promise = self2.ready().then(function() {
+              var dbInfo = self2._dbInfo;
+              var length2 = localStorage.length;
+              var keys2 = [];
+              for (var i = 0; i < length2; i++) {
+                var itemKey = localStorage.key(i);
+                if (itemKey.indexOf(dbInfo.keyPrefix) === 0) {
+                  keys2.push(itemKey.substring(dbInfo.keyPrefix.length));
+                }
+              }
+              return keys2;
+            });
+            executeCallback(promise, callback);
+            return promise;
+          }
+          function length$2(callback) {
+            var self2 = this;
+            var promise = self2.keys().then(function(keys2) {
+              return keys2.length;
+            });
+            executeCallback(promise, callback);
+            return promise;
+          }
+          function removeItem$2(key2, callback) {
+            var self2 = this;
+            key2 = normalizeKey(key2);
+            var promise = self2.ready().then(function() {
+              var dbInfo = self2._dbInfo;
+              localStorage.removeItem(dbInfo.keyPrefix + key2);
+            });
+            executeCallback(promise, callback);
+            return promise;
+          }
+          function setItem$2(key2, value, callback) {
+            var self2 = this;
+            key2 = normalizeKey(key2);
+            var promise = self2.ready().then(function() {
+              if (value === void 0) {
+                value = null;
+              }
+              var originalValue = value;
+              return new Promise$1(function(resolve, reject) {
+                var dbInfo = self2._dbInfo;
+                dbInfo.serializer.serialize(value, function(value2, error) {
+                  if (error) {
+                    reject(error);
+                  } else {
+                    try {
+                      localStorage.setItem(dbInfo.keyPrefix + key2, value2);
+                      resolve(originalValue);
+                    } catch (e) {
+                      if (e.name === "QuotaExceededError" || e.name === "NS_ERROR_DOM_QUOTA_REACHED") {
+                        reject(e);
+                      }
+                      reject(e);
+                    }
+                  }
+                });
+              });
+            });
+            executeCallback(promise, callback);
+            return promise;
+          }
+          function dropInstance$2(options, callback) {
+            callback = getCallback.apply(this, arguments);
+            options = typeof options !== "function" && options || {};
+            if (!options.name) {
+              var currentConfig = this.config();
+              options.name = options.name || currentConfig.name;
+              options.storeName = options.storeName || currentConfig.storeName;
+            }
+            var self2 = this;
+            var promise;
+            if (!options.name) {
+              promise = Promise$1.reject("Invalid arguments");
+            } else {
+              promise = new Promise$1(function(resolve) {
+                if (!options.storeName) {
+                  resolve(options.name + "/");
+                } else {
+                  resolve(_getKeyPrefix(options, self2._defaultConfig));
+                }
+              }).then(function(keyPrefix) {
+                for (var i = localStorage.length - 1; i >= 0; i--) {
+                  var key2 = localStorage.key(i);
+                  if (key2.indexOf(keyPrefix) === 0) {
+                    localStorage.removeItem(key2);
+                  }
+                }
+              });
+            }
+            executeCallback(promise, callback);
+            return promise;
+          }
+          var localStorageWrapper = {
+            _driver: "localStorageWrapper",
+            _initStorage: _initStorage$2,
+            _support: isLocalStorageValid(),
+            iterate: iterate$2,
+            getItem: getItem$2,
+            setItem: setItem$2,
+            removeItem: removeItem$2,
+            clear: clear$2,
+            length: length$2,
+            key: key$2,
+            keys: keys$2,
+            dropInstance: dropInstance$2
+          };
+          var sameValue = function sameValue2(x, y) {
+            return x === y || typeof x === "number" && typeof y === "number" && isNaN(x) && isNaN(y);
+          };
+          var includes = function includes2(array, searchElement) {
+            var len = array.length;
+            var i = 0;
+            while (i < len) {
+              if (sameValue(array[i], searchElement)) {
+                return true;
+              }
+              i++;
+            }
+            return false;
+          };
+          var isArray = Array.isArray || function(arg) {
+            return Object.prototype.toString.call(arg) === "[object Array]";
+          };
+          var DefinedDrivers = {};
+          var DriverSupport = {};
+          var DefaultDrivers = {
+            INDEXEDDB: asyncStorage,
+            WEBSQL: webSQLStorage,
+            LOCALSTORAGE: localStorageWrapper
+          };
+          var DefaultDriverOrder = [DefaultDrivers.INDEXEDDB._driver, DefaultDrivers.WEBSQL._driver, DefaultDrivers.LOCALSTORAGE._driver];
+          var OptionalDriverMethods = ["dropInstance"];
+          var LibraryMethods = ["clear", "getItem", "iterate", "key", "keys", "length", "removeItem", "setItem"].concat(OptionalDriverMethods);
+          var DefaultConfig = {
+            description: "",
+            driver: DefaultDriverOrder.slice(),
+            name: "localforage",
+            // Default DB size is _JUST UNDER_ 5MB, as it's the highest size
+            // we can use without a prompt.
+            size: 4980736,
+            storeName: "keyvaluepairs",
+            version: 1
+          };
+          function callWhenReady(localForageInstance, libraryMethod) {
+            localForageInstance[libraryMethod] = function() {
+              var _args = arguments;
+              return localForageInstance.ready().then(function() {
+                return localForageInstance[libraryMethod].apply(localForageInstance, _args);
+              });
+            };
+          }
+          function extend() {
+            for (var i = 1; i < arguments.length; i++) {
+              var arg = arguments[i];
+              if (arg) {
+                for (var _key in arg) {
+                  if (arg.hasOwnProperty(_key)) {
+                    if (isArray(arg[_key])) {
+                      arguments[0][_key] = arg[_key].slice();
+                    } else {
+                      arguments[0][_key] = arg[_key];
+                    }
+                  }
+                }
+              }
+            }
+            return arguments[0];
+          }
+          var LocalForage = function() {
+            function LocalForage2(options) {
+              _classCallCheck(this, LocalForage2);
+              for (var driverTypeKey in DefaultDrivers) {
+                if (DefaultDrivers.hasOwnProperty(driverTypeKey)) {
+                  var driver = DefaultDrivers[driverTypeKey];
+                  var driverName = driver._driver;
+                  this[driverTypeKey] = driverName;
+                  if (!DefinedDrivers[driverName]) {
+                    this.defineDriver(driver);
+                  }
+                }
+              }
+              this._defaultConfig = extend({}, DefaultConfig);
+              this._config = extend({}, this._defaultConfig, options);
+              this._driverSet = null;
+              this._initDriver = null;
+              this._ready = false;
+              this._dbInfo = null;
+              this._wrapLibraryMethodsWithReady();
+              this.setDriver(this._config.driver)["catch"](function() {
+              });
+            }
+            LocalForage2.prototype.config = function config(options) {
+              if ((typeof options === "undefined" ? "undefined" : _typeof(options)) === "object") {
+                if (this._ready) {
+                  return new Error("Can't call config() after localforage has been used.");
+                }
+                for (var i in options) {
+                  if (i === "storeName") {
+                    options[i] = options[i].replace(/\W/g, "_");
+                  }
+                  if (i === "version" && typeof options[i] !== "number") {
+                    return new Error("Database version must be a number.");
+                  }
+                  this._config[i] = options[i];
+                }
+                if ("driver" in options && options.driver) {
+                  return this.setDriver(this._config.driver);
+                }
+                return true;
+              } else if (typeof options === "string") {
+                return this._config[options];
+              } else {
+                return this._config;
+              }
+            };
+            LocalForage2.prototype.defineDriver = function defineDriver(driverObject, callback, errorCallback) {
+              var promise = new Promise$1(function(resolve, reject) {
+                try {
+                  var driverName = driverObject._driver;
+                  var complianceError = new Error("Custom driver not compliant; see https://mozilla.github.io/localForage/#definedriver");
+                  if (!driverObject._driver) {
+                    reject(complianceError);
+                    return;
+                  }
+                  var driverMethods = LibraryMethods.concat("_initStorage");
+                  for (var i = 0, len = driverMethods.length; i < len; i++) {
+                    var driverMethodName = driverMethods[i];
+                    var isRequired = !includes(OptionalDriverMethods, driverMethodName);
+                    if ((isRequired || driverObject[driverMethodName]) && typeof driverObject[driverMethodName] !== "function") {
+                      reject(complianceError);
+                      return;
+                    }
+                  }
+                  var configureMissingMethods = function configureMissingMethods2() {
+                    var methodNotImplementedFactory = function methodNotImplementedFactory2(methodName) {
+                      return function() {
+                        var error = new Error("Method " + methodName + " is not implemented by the current driver");
+                        var promise2 = Promise$1.reject(error);
+                        executeCallback(promise2, arguments[arguments.length - 1]);
+                        return promise2;
+                      };
+                    };
+                    for (var _i = 0, _len = OptionalDriverMethods.length; _i < _len; _i++) {
+                      var optionalDriverMethod = OptionalDriverMethods[_i];
+                      if (!driverObject[optionalDriverMethod]) {
+                        driverObject[optionalDriverMethod] = methodNotImplementedFactory(optionalDriverMethod);
+                      }
+                    }
+                  };
+                  configureMissingMethods();
+                  var setDriverSupport = function setDriverSupport2(support) {
+                    if (DefinedDrivers[driverName]) {
+                      console.info("Redefining LocalForage driver: " + driverName);
+                    }
+                    DefinedDrivers[driverName] = driverObject;
+                    DriverSupport[driverName] = support;
+                    resolve();
+                  };
+                  if ("_support" in driverObject) {
+                    if (driverObject._support && typeof driverObject._support === "function") {
+                      driverObject._support().then(setDriverSupport, reject);
+                    } else {
+                      setDriverSupport(!!driverObject._support);
+                    }
+                  } else {
+                    setDriverSupport(true);
+                  }
+                } catch (e) {
+                  reject(e);
+                }
+              });
+              executeTwoCallbacks(promise, callback, errorCallback);
+              return promise;
+            };
+            LocalForage2.prototype.driver = function driver() {
+              return this._driver || null;
+            };
+            LocalForage2.prototype.getDriver = function getDriver(driverName, callback, errorCallback) {
+              var getDriverPromise = DefinedDrivers[driverName] ? Promise$1.resolve(DefinedDrivers[driverName]) : Promise$1.reject(new Error("Driver not found."));
+              executeTwoCallbacks(getDriverPromise, callback, errorCallback);
+              return getDriverPromise;
+            };
+            LocalForage2.prototype.getSerializer = function getSerializer(callback) {
+              var serializerPromise = Promise$1.resolve(localforageSerializer);
+              executeTwoCallbacks(serializerPromise, callback);
+              return serializerPromise;
+            };
+            LocalForage2.prototype.ready = function ready(callback) {
+              var self2 = this;
+              var promise = self2._driverSet.then(function() {
+                if (self2._ready === null) {
+                  self2._ready = self2._initDriver();
+                }
+                return self2._ready;
+              });
+              executeTwoCallbacks(promise, callback, callback);
+              return promise;
+            };
+            LocalForage2.prototype.setDriver = function setDriver(drivers, callback, errorCallback) {
+              var self2 = this;
+              if (!isArray(drivers)) {
+                drivers = [drivers];
+              }
+              var supportedDrivers = this._getSupportedDrivers(drivers);
+              function setDriverToConfig() {
+                self2._config.driver = self2.driver();
+              }
+              function extendSelfWithDriver(driver) {
+                self2._extend(driver);
+                setDriverToConfig();
+                self2._ready = self2._initStorage(self2._config);
+                return self2._ready;
+              }
+              function initDriver(supportedDrivers2) {
+                return function() {
+                  var currentDriverIndex = 0;
+                  function driverPromiseLoop() {
+                    while (currentDriverIndex < supportedDrivers2.length) {
+                      var driverName = supportedDrivers2[currentDriverIndex];
+                      currentDriverIndex++;
+                      self2._dbInfo = null;
+                      self2._ready = null;
+                      return self2.getDriver(driverName).then(extendSelfWithDriver)["catch"](driverPromiseLoop);
+                    }
+                    setDriverToConfig();
+                    var error = new Error("No available storage method found.");
+                    self2._driverSet = Promise$1.reject(error);
+                    return self2._driverSet;
+                  }
+                  return driverPromiseLoop();
+                };
+              }
+              var oldDriverSetDone = this._driverSet !== null ? this._driverSet["catch"](function() {
+                return Promise$1.resolve();
+              }) : Promise$1.resolve();
+              this._driverSet = oldDriverSetDone.then(function() {
+                var driverName = supportedDrivers[0];
+                self2._dbInfo = null;
+                self2._ready = null;
+                return self2.getDriver(driverName).then(function(driver) {
+                  self2._driver = driver._driver;
+                  setDriverToConfig();
+                  self2._wrapLibraryMethodsWithReady();
+                  self2._initDriver = initDriver(supportedDrivers);
+                });
+              })["catch"](function() {
+                setDriverToConfig();
+                var error = new Error("No available storage method found.");
+                self2._driverSet = Promise$1.reject(error);
+                return self2._driverSet;
+              });
+              executeTwoCallbacks(this._driverSet, callback, errorCallback);
+              return this._driverSet;
+            };
+            LocalForage2.prototype.supports = function supports(driverName) {
+              return !!DriverSupport[driverName];
+            };
+            LocalForage2.prototype._extend = function _extend(libraryMethodsAndProperties) {
+              extend(this, libraryMethodsAndProperties);
+            };
+            LocalForage2.prototype._getSupportedDrivers = function _getSupportedDrivers(drivers) {
+              var supportedDrivers = [];
+              for (var i = 0, len = drivers.length; i < len; i++) {
+                var driverName = drivers[i];
+                if (this.supports(driverName)) {
+                  supportedDrivers.push(driverName);
+                }
+              }
+              return supportedDrivers;
+            };
+            LocalForage2.prototype._wrapLibraryMethodsWithReady = function _wrapLibraryMethodsWithReady() {
+              for (var i = 0, len = LibraryMethods.length; i < len; i++) {
+                callWhenReady(this, LibraryMethods[i]);
+              }
+            };
+            LocalForage2.prototype.createInstance = function createInstance(options) {
+              return new LocalForage2(options);
+            };
+            return LocalForage2;
+          }();
+          var localforage_js = new LocalForage();
+          module3.exports = localforage_js;
+        }, { "3": 3 }] }, {}, [4])(4);
+      });
+    }
+  });
+
+  // node_modules/pick-dom-element/dist/element-overlay.js
+  var ElementOverlay = class {
+    constructor(options) {
+      var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l;
+      this.overlay = document.createElement("div");
+      this.overlay.className = options.className || "_ext-element-overlay";
+      this.overlay.style.background = ((_a = options.style) === null || _a === void 0 ? void 0 : _a.background) || "rgba(250, 240, 202, 0.2)";
+      this.overlay.style.borderColor = ((_b = options.style) === null || _b === void 0 ? void 0 : _b.borderColor) || "#F95738";
+      this.overlay.style.borderStyle = ((_c = options.style) === null || _c === void 0 ? void 0 : _c.borderStyle) || "solid";
+      this.overlay.style.borderRadius = ((_d = options.style) === null || _d === void 0 ? void 0 : _d.borderRadius) || "1px";
+      this.overlay.style.borderWidth = ((_e = options.style) === null || _e === void 0 ? void 0 : _e.borderWidth) || "1px";
+      this.overlay.style.boxSizing = ((_f = options.style) === null || _f === void 0 ? void 0 : _f.boxSizing) || "border-box";
+      this.overlay.style.cursor = ((_g = options.style) === null || _g === void 0 ? void 0 : _g.cursor) || "crosshair";
+      this.overlay.style.position = ((_h = options.style) === null || _h === void 0 ? void 0 : _h.position) || "absolute";
+      this.overlay.style.zIndex = ((_j = options.style) === null || _j === void 0 ? void 0 : _j.zIndex) || "2147483647";
+      this.overlay.style.margin = ((_k = options.style) === null || _k === void 0 ? void 0 : _k.margin) || "0px";
+      this.overlay.style.padding = ((_l = options.style) === null || _l === void 0 ? void 0 : _l.padding) || "0px";
+      this.shadowContainer = document.createElement("div");
+      this.shadowContainer.className = "_ext-element-overlay-container";
+      this.shadowContainer.style.position = "absolute";
+      this.shadowContainer.style.top = "0px";
+      this.shadowContainer.style.left = "0px";
+      this.shadowContainer.style.margin = "0px";
+      this.shadowContainer.style.padding = "0px";
+      this.shadowRoot = this.shadowContainer.attachShadow({ mode: "open" });
+    }
+    addToDOM(parent, useShadowDOM) {
+      this.usingShadowDOM = useShadowDOM;
+      if (useShadowDOM) {
+        parent.insertBefore(this.shadowContainer, parent.firstChild);
+        this.shadowRoot.appendChild(this.overlay);
+      } else {
+        parent.appendChild(this.overlay);
+      }
+    }
+    removeFromDOM() {
+      this.setBounds({ x: 0, y: 0, width: 0, height: 0 });
+      this.overlay.remove();
+      if (this.usingShadowDOM) {
+        this.shadowContainer.remove();
+      }
+    }
+    captureCursor() {
+      this.overlay.style.pointerEvents = "auto";
+    }
+    ignoreCursor() {
+      this.overlay.style.pointerEvents = "none";
+    }
+    setBounds({ x, y, width, height: height2 }) {
+      this.overlay.style.left = x + "px";
+      this.overlay.style.top = y + "px";
+      this.overlay.style.width = width + "px";
+      this.overlay.style.height = height2 + "px";
+    }
+  };
+
+  // node_modules/pick-dom-element/dist/utils.js
+  var getElementBounds = (el) => {
+    const rect = el.getBoundingClientRect();
+    return {
+      x: window.pageXOffset + rect.left,
+      y: window.pageYOffset + rect.top,
+      width: el.offsetWidth,
+      height: el.offsetHeight
+    };
+  };
+
+  // node_modules/pick-dom-element/dist/element-picker.js
+  var ElementPicker = class {
+    constructor(overlayOptions) {
+      this.handleMouseMove = (event) => {
+        this.mouseX = event.clientX;
+        this.mouseY = event.clientY;
+      };
+      this.handleClick = (event) => {
+        var _a;
+        if (this.target && ((_a = this.options) === null || _a === void 0 ? void 0 : _a.onClick)) {
+          this.options.onClick(this.target);
+        }
+        event.preventDefault();
+      };
+      this.tick = () => {
+        this.updateTarget();
+        this.tickReq = window.requestAnimationFrame(this.tick);
+      };
+      this.active = false;
+      this.overlay = new ElementOverlay(overlayOptions !== null && overlayOptions !== void 0 ? overlayOptions : {});
+    }
+    start(options) {
+      var _a, _b;
+      if (this.active) {
+        return false;
+      }
+      this.active = true;
+      this.options = options;
+      document.addEventListener("mousemove", this.handleMouseMove, true);
+      document.addEventListener("click", this.handleClick, true);
+      this.overlay.addToDOM((_a = options.parentElement) !== null && _a !== void 0 ? _a : document.body, (_b = options.useShadowDOM) !== null && _b !== void 0 ? _b : true);
+      this.tick();
+      return true;
+    }
+    stop() {
+      this.active = false;
+      this.options = void 0;
+      document.removeEventListener("mousemove", this.handleMouseMove, true);
+      document.removeEventListener("click", this.handleClick, true);
+      this.overlay.removeFromDOM();
+      this.target = void 0;
+      this.mouseX = void 0;
+      this.mouseY = void 0;
+      if (this.tickReq) {
+        window.cancelAnimationFrame(this.tickReq);
+      }
+    }
+    updateTarget() {
+      var _a, _b;
+      if (this.mouseX === void 0 || this.mouseY === void 0) {
+        return;
+      }
+      this.overlay.ignoreCursor();
+      const elAtCursor = document.elementFromPoint(this.mouseX, this.mouseY);
+      const newTarget = elAtCursor;
+      this.overlay.captureCursor();
+      if (!newTarget || newTarget === this.target) {
+        return;
+      }
+      if ((_a = this.options) === null || _a === void 0 ? void 0 : _a.elementFilter) {
+        if (!this.options.elementFilter(newTarget)) {
+          this.target = void 0;
+          this.overlay.setBounds({ x: 0, y: 0, width: 0, height: 0 });
+          return;
+        }
+      }
+      this.target = newTarget;
+      const bounds = getElementBounds(newTarget);
+      this.overlay.setBounds(bounds);
+      if ((_b = this.options) === null || _b === void 0 ? void 0 : _b.onHover) {
+        this.options.onHover(newTarget);
+      }
+    }
+  };
+
   // node_modules/css-selector-generator/esm/utilities-iselement.js
   function isElement(input) {
     return typeof input === "object" && input !== null && input.nodeType === Node.ELEMENT_NODE;
@@ -606,11 +2929,6 @@
     return getFallbackSelector(elements);
   }
 
-  // node_modules/dom-helpers/esm/ownerDocument.js
-  function ownerDocument(node) {
-    return node && node.ownerDocument || document;
-  }
-
   // node_modules/dom-helpers/esm/canUseDOM.js
   var canUseDOM_default = !!(typeof window !== "undefined" && window.document && window.document.createElement);
 
@@ -657,14 +2975,6 @@
     });
   }
 
-  // node_modules/dom-helpers/esm/contains.js
-  function contains(context, node) {
-    if (context.contains)
-      return context.contains(node);
-    if (context.compareDocumentPosition)
-      return context === node || !!(context.compareDocumentPosition(node) & 16);
-  }
-
   // node_modules/dom-helpers/esm/childNodes.js
   var toArray = Function.prototype.bind.call(Function.prototype.call, [].slice);
 
@@ -708,44 +3018,9 @@
   // node_modules/dom-helpers/esm/scrollTop.js
   var scrollTop_default = getscrollAccessor("pageYOffset");
 
-  // node_modules/dom-helpers/esm/offset.js
-  function offset(node) {
-    const doc = ownerDocument(node);
-    let box = {
-      top: 0,
-      left: 0,
-      height: 0,
-      width: 0
-    };
-    const docElem = doc && doc.documentElement;
-    if (!docElem || !contains(docElem, node))
-      return box;
-    if (node.getBoundingClientRect !== void 0)
-      box = node.getBoundingClientRect();
-    box = {
-      top: box.top + scrollTop_default(docElem) - (docElem.clientTop || 0),
-      left: box.left + scrollLeft_default(docElem) - (docElem.clientLeft || 0),
-      width: box.width,
-      height: box.height
-    };
-    return box;
-  }
-
-  // node_modules/dom-helpers/esm/height.js
-  function height(node, client) {
-    const win = isWindow(node);
-    return win ? win.innerHeight : client ? node.clientHeight : offset(node).height;
-  }
-
   // node_modules/dom-helpers/esm/isVisible.js
   function isVisible(node) {
     return node ? !!(node.offsetWidth || node.offsetHeight || node.getClientRects().length) : false;
-  }
-
-  // node_modules/dom-helpers/esm/width.js
-  function getWidth(node, client) {
-    const win = isWindow(node);
-    return win ? win.innerWidth : client ? node.clientWidth : offset(node).width;
   }
 
   // node_modules/lodash-es/_freeGlobal.js
@@ -758,8 +3033,8 @@
   var root_default = root;
 
   // node_modules/lodash-es/_Symbol.js
-  var Symbol = root_default.Symbol;
-  var Symbol_default = Symbol;
+  var Symbol2 = root_default.Symbol;
+  var Symbol_default = Symbol2;
 
   // node_modules/lodash-es/_getRawTag.js
   var objectProto = Object.prototype;
@@ -961,42 +3236,26 @@
   }
   var debounce_default = debounce;
 
-  // node_modules/lodash-es/throttle.js
-  var FUNC_ERROR_TEXT2 = "Expected a function";
-  function throttle(func, wait, options) {
-    var leading = true, trailing = true;
-    if (typeof func != "function") {
-      throw new TypeError(FUNC_ERROR_TEXT2);
-    }
-    if (isObject_default(options)) {
-      leading = "leading" in options ? !!options.leading : leading;
-      trailing = "trailing" in options ? !!options.trailing : trailing;
-    }
-    return debounce_default(func, wait, {
-      "leading": leading,
-      "maxWait": wait,
-      "trailing": trailing
-    });
-  }
-  var throttle_default = throttle;
-
-  // src/elementPicker.js
+  // src/elementPicker-refactored.js
+  var import_localforage = __toESM(require_localforage());
   (() => {
-    var ElementManager = class {
+    const elementStorage = import_localforage.default.createInstance({
+      name: "web-llm-elements",
+      storeName: "elements",
+      description: "Stored DOM elements for Web LLM Assistant"
+    });
+    class ElementManager {
       constructor() {
         this.elementStore = /* @__PURE__ */ new Map();
         this.elementCounter = 1;
-        this.storageKey = "web_llm_elements";
-        this.selectorCache = /* @__PURE__ */ new Map();
         this.mutationObservers = /* @__PURE__ */ new Map();
         this.loadStoredElements();
       }
-      // Load elements from Chrome storage
+      // Load elements from localforage
       async loadStoredElements() {
         try {
-          const result = await chrome.storage.local.get([this.storageKey]);
-          if (result[this.storageKey]) {
-            const stored = result[this.storageKey];
+          const stored = await elementStorage.getItem("elementData");
+          if (stored) {
             this.elementStore = new Map(stored.elements || []);
             this.elementCounter = stored.counter || 1;
             console.log(`Loaded ${this.elementStore.size} stored elements`);
@@ -1005,7 +3264,7 @@
           console.error("Error loading stored elements:", error);
         }
       }
-      // Save elements to Chrome storage with debouncing
+      // Save elements to localforage with debouncing
       saveElements = debounce_default(async () => {
         try {
           const dataToStore = {
@@ -1013,9 +3272,7 @@
             counter: this.elementCounter,
             timestamp: Date.now()
           };
-          await chrome.storage.local.set({
-            [this.storageKey]: dataToStore
-          });
+          await elementStorage.setItem("elementData", dataToStore);
           console.log("Elements saved to storage");
         } catch (error) {
           console.error("Error saving elements:", error);
@@ -1027,9 +3284,8 @@
           this.mutationObservers.forEach((observer) => observer.disconnect());
           this.mutationObservers.clear();
           this.elementStore.clear();
-          this.selectorCache.clear();
           this.elementCounter = 1;
-          await chrome.storage.local.remove([this.storageKey]);
+          await elementStorage.clear();
           console.log("All stored elements cleared");
           return true;
         } catch (error) {
@@ -1050,7 +3306,6 @@
             this.mutationObservers.delete(elementId);
           }
           this.elementStore.delete(elementId);
-          this.selectorCache.delete(elementId);
           await this.saveElements();
           console.log(`Element "${elementId}" deleted successfully`);
           return true;
@@ -1059,9 +3314,8 @@
           return false;
         }
       }
-      // Add a new element with enhanced tracking
+      // Add a new element
       async addElement(data, options = {}) {
-        console.log("ElementManager.addElement called, current counter:", this.elementCounter);
         const elementId = `element${this.elementCounter}`;
         this.elementCounter++;
         const elementData = {
@@ -1076,44 +3330,35 @@
           this.setupElementTracking(elementId, data.selector);
         }
         await this.saveElements();
-        console.log("Element added with ID:", elementId, "new counter:", this.elementCounter);
+        console.log("Element added with ID:", elementId);
         return { id: elementId, data: elementData };
       }
-      // Set up mutation observer for element
+      // Setup IntersectionObserver for element tracking
       setupElementTracking(elementId, selector) {
         try {
           const element = document.querySelector(selector);
           if (!element)
             return;
-          const observer = new MutationObserver((mutations) => {
-            this.handleElementMutation(elementId, mutations);
+          const observer = new IntersectionObserver((entries) => {
+            entries.forEach((entry) => {
+              const data = this.elementStore.get(elementId);
+              if (data) {
+                data.lastModified = Date.now();
+                data.isVisible = entry.isIntersecting;
+                data.intersectionRatio = entry.intersectionRatio;
+                data.boundingClientRect = entry.boundingClientRect;
+                this.elementStore.set(elementId, data);
+                this.saveElements();
+              }
+            });
+          }, {
+            threshold: [0, 0.25, 0.5, 0.75, 1]
           });
-          observer.observe(element, {
-            attributes: true,
-            characterData: true,
-            childList: true,
-            subtree: true
-          });
+          observer.observe(element);
           this.mutationObservers.set(elementId, observer);
         } catch (error) {
           console.error("Error setting up element tracking:", error);
         }
-      }
-      // Handle element mutations
-      handleElementMutation(elementId, mutations) {
-        const data = this.elementStore.get(elementId);
-        if (!data)
-          return;
-        const updates = {
-          lastModified: Date.now(),
-          mutations: mutations.map((m) => ({
-            type: m.type,
-            attributeName: m.attributeName,
-            oldValue: m.oldValue
-          }))
-        };
-        this.elementStore.set(elementId, { ...data, ...updates });
-        this.saveElements();
       }
       // Rename an element
       async renameElement(currentName, newName) {
@@ -1151,11 +3396,6 @@
         }
         return null;
       }
-      // Get current name of an element
-      getCurrentName(elementKey) {
-        const data = this.elementStore.get(elementKey);
-        return (data == null ? void 0 : data.customName) || elementKey;
-      }
       // Get element data by reference
       getElementData(elementRef) {
         return this.elementStore.get(elementRef);
@@ -1168,49 +3408,6 @@
           data,
           name: data.id ? `#${data.id}` : data.className ? `.${data.className.toString().split(" ")[0]}` : `<${data.tagName}>`
         }));
-      }
-      // Verify element still exists and update selector if needed
-      async verifyElement(elementId) {
-        const data = this.elementStore.get(elementId);
-        if (!data)
-          return false;
-        let element = document.querySelector(data.selector);
-        if (!element && data.fallbackSelectors) {
-          for (const selector of data.fallbackSelectors) {
-            element = document.querySelector(selector);
-            if (element) {
-              data.selector = selector;
-              break;
-            }
-          }
-        }
-        if (!element && data.contentFingerprint) {
-          element = this.findByContentFingerprint(data.contentFingerprint);
-          if (element) {
-            const picker = new ElementPicker(this);
-            const newData = picker.extractElementData(element);
-            data.selector = newData.selector;
-            data.fallbackSelectors = newData.fallbackSelectors;
-          }
-        }
-        data.lastVerified = Date.now();
-        data.isValid = !!element;
-        this.elementStore.set(elementId, data);
-        await this.saveElements();
-        return !!element;
-      }
-      // Find element by content fingerprint
-      findByContentFingerprint(fingerprint) {
-        var _a;
-        const allElements = document.querySelectorAll(fingerprint.tagName);
-        for (const element of allElements) {
-          const text2 = ((_a = element.textContent) == null ? void 0 : _a.trim()) || "";
-          const attrs = Array.from(element.attributes).map((a) => `${a.name}=${a.value}`).sort().join("|");
-          if (text2.includes(fingerprint.textSnippet) || attrs.includes(fingerprint.attributeSignature)) {
-            return element;
-          }
-        }
-        return null;
       }
       // Process message to replace element references
       processElementReferences(message) {
@@ -1241,23 +3438,17 @@ ${this.formatElementInfo(data)}
         }
         return processedMessage;
       }
+      // Format element info for display
       formatElementInfo(data) {
         const styles = Object.entries(data.styles || {}).filter(([, value]) => value && value !== "none" && value !== "auto" && value !== "").map(([key, value]) => `  ${key}: ${value}`).join("\n");
         const attributes = Object.entries(data.attributes || {}).map(([key, value]) => `  ${key}: ${value}`).join("\n");
-        const examples = data.manipulationExamples ? Object.entries(data.manipulationExamples).map(([action, code]) => `${action}:
-${code}`).join("\n\n") : "";
         return `Element: ${data.selector}
 ${data.fallbackSelectors ? `Fallback Selectors: ${data.fallbackSelectors.join(", ")}` : ""}
 Tag: <${data.tagName}>
 ${data.id ? `ID: ${data.id}` : ""}
 ${data.className ? `Classes: ${data.className}` : ""}
-${data.xpath ? `XPath: ${data.xpath}` : ""}
 ${data.position ? `Position: ${data.position.x}px, ${data.position.y}px (${data.position.width}x${data.position.height})` : ""}
-${data.isValid !== void 0 ? `Valid: ${data.isValid}` : ""}
 ${data.isVisible !== void 0 ? `Visible: ${data.isVisible}` : ""}
-${data.isClickable !== void 0 ? `Clickable: ${data.isClickable}` : ""}
-${data.isInteractive !== void 0 ? `Interactive: ${data.isInteractive}` : ""}
-${data.eventListeners ? `Event Listeners: ${data.eventListeners.join(", ")}` : ""}
 
 HTML:
 \`\`\`html
@@ -1273,11 +3464,9 @@ ${attributes}
 Key Styles:
 \`\`\`css
 ${styles}
-\`\`\`
-
-${examples ? `Console Manipulation Examples:
-${examples}` : ""}`;
+\`\`\``;
       }
+      // Format element summary
       formatElementSummary(data, elementId) {
         const elementName = data.id ? `#${data.id}` : data.className ? `.${data.className.toString().split(" ")[0]}` : `<${data.tagName}>`;
         const text2 = data.text ? ` - "${data.text.slice(0, 50)}${data.text.length > 50 ? "..." : ""}"` : "";
@@ -1285,164 +3474,40 @@ ${examples}` : ""}`;
         const validity = data.isValid !== void 0 ? data.isValid ? "\u2713" : "\u2717" : "";
         return `\u{1F3AF} **@${displayName}** ${validity} saved: ${elementName}${text2} (Type "rename @${displayName} newname" to rename)`;
       }
-    };
-    var ElementPicker = class {
+    }
+    class ElementPicker2 {
       constructor(elementManager, options = {}) {
-        this.isActive = false;
-        this.overlay = null;
-        this.highlightBox = null;
-        this.infoBox = null;
         this.elementManager = elementManager;
-        this.currentElement = null;
-        this.shadowRoots = /* @__PURE__ */ new WeakMap();
         this.options = {
-          showInfoBox: options.showInfoBox !== false,
-          // Default true
-          enableRightClick: options.enableRightClick !== false,
-          // Default true
-          enableKeyboardNav: options.enableKeyboardNav !== false,
-          // Default true
+          borderColor: "#ff6b35",
+          backgroundColor: "rgba(255, 107, 53, 0.1)",
           ...options
         };
-        this.onMouseMove = this.onMouseMove.bind(this);
-        this.onClick = this.onClick.bind(this);
-        this.onKeyDown = this.onKeyDown.bind(this);
-        this.onContextMenu = this.onContextMenu.bind(this);
-      }
-      // Core helper methods - defined first to be available throughout the class
-      // Check if an ID appears to be dynamically generated
-      isDynamicId(id) {
-        const dynamicPatterns = [
-          /\d{4,}/,
-          // Long numbers (timestamps, etc.)
-          /[a-f0-9]{8,}/,
-          // Hex strings (UUIDs, etc.)
-          /^(ember|react|vue|angular)\d+/,
-          // Framework-generated IDs
-          /^auto_/,
-          // Auto-generated prefixes
-          /temp|tmp|generated|random/i,
-          // Common dynamic keywords
-          /_\d+$/,
-          // Ending with underscore + number
-          /^[a-f0-9-]{36}$/
-          // UUID pattern
-        ];
-        return dynamicPatterns.some((pattern) => pattern.test(id));
-      }
-      // Check if a class is a utility class that should be avoided
-      isUtilityClass(className) {
-        const utilityPatterns = [
-          /^(m|p)[trblxy]?-\d+$/,
-          // margin/padding utilities (m-4, pt-2, etc.)
-          /^(w|h)-\d+$/,
-          // width/height utilities
-          /^text-(xs|sm|base|lg|xl|\d+xl)$/,
-          // text size utilities
-          /^(flex|grid|block|inline)/,
-          // display utilities
-          /^(bg|text|border)-(primary|secondary|success|danger|warning|info|light|dark)$/,
-          // color utilities
-          /^(rounded|shadow|opacity)/,
-          // common utility prefixes
-          /^(hover|focus|active):/,
-          // state prefixes
-          /^(sm|md|lg|xl):/,
-          // responsive prefixes
-          /^d-/,
-          // Bootstrap display utilities
-          /^col-/,
-          // Bootstrap grid
-          /^btn-/,
-          // Bootstrap button variants (but not 'btn' itself)
-          /^alert-/,
-          // Bootstrap alert variants
-          /^badge-/
-          // Bootstrap badge variants
-        ];
-        return utilityPatterns.some((pattern) => pattern.test(className)) || className.length < 3 || // Very short classes are often utilities
-        /^\d/.test(className);
-      }
-      // Get content-based selector for buttons and links
-      getContentSelector(element) {
-        var _a, _b;
-        const tag = element.tagName.toLowerCase();
-        const text2 = (_a = element.textContent) == null ? void 0 : _a.trim();
-        if (tag === "input" && ["submit", "button"].includes(element.type)) {
-          const value = (_b = element.value) == null ? void 0 : _b.trim();
-          if (value && value.length < 30) {
-            const selector = `input[value="${CSS.escape(value)}"]`;
-            if (document.querySelectorAll(selector).length === 1) {
-              return selector;
-            }
-          }
-        }
-        if (["button", "a"].includes(tag) && text2 && text2.length < 50) {
-          const elements = Array.from(document.querySelectorAll(tag));
-          const matches2 = elements.filter((el) => {
-            var _a2;
-            return ((_a2 = el.textContent) == null ? void 0 : _a2.trim()) === text2;
-          });
-          if (matches2.length === 1) {
-            return `${tag} /* text: "${text2}" */`;
-          }
-        }
-        if (tag === "input" && element.type === "submit") {
-          const form = element.closest("form");
-          if (form) {
-            if (form.id) {
-              return `#${CSS.escape(form.id)} input[type="submit"]`;
-            }
-            if (form.name) {
-              return `form[name="${CSS.escape(form.name)}"] input[type="submit"]`;
-            }
-          }
-        }
-        return null;
-      }
-      // Get CSS path for an element
-      getCSSPath(element) {
-        const path = [];
-        let current = element;
-        while (current && current !== document.documentElement) {
-          let selector = current.tagName.toLowerCase();
-          if (current.id) {
-            selector += `#${CSS.escape(current.id)}`;
-            path.unshift(selector);
-            break;
-          }
-          if (current.className) {
-            const classes = (current.className || "").toString().trim().split(/\s+/);
-            if (classes.length > 0) {
-              selector += "." + classes.map((c) => CSS.escape(c)).join(".");
-            }
-          }
-          const parent = current.parentElement;
-          if (parent) {
-            const siblings2 = Array.from(parent.children).filter((el) => el.tagName === current.tagName);
-            if (siblings2.length > 1) {
-              const index = siblings2.indexOf(current) + 1;
-              selector += `:nth-of-type(${index})`;
-            }
-          }
-          path.unshift(selector);
-          current = parent;
-        }
-        return path.join(" > ");
-      }
-      // Check if element is focusable
-      isFocusable(element) {
-        const focusableTags = ["input", "textarea", "select", "button", "a"];
-        return focusableTags.includes(element.tagName.toLowerCase()) || element.tabIndex >= 0 || element.isContentEditable;
+        this.picker = null;
+        this.isActive = false;
       }
       start() {
         if (this.isActive)
           return;
-        console.log("Starting advanced element picker...");
+        console.log("Starting modern element picker...");
         this.isActive = true;
-        this.scanForShadowRoots();
-        this.createUI();
-        this.attachEvents();
+        this.picker = new ElementPicker({
+          style: {
+            borderColor: this.options.borderColor,
+            backgroundColor: this.options.backgroundColor,
+            borderWidth: "2px",
+            borderStyle: "solid"
+          }
+        });
+        this.picker.start({
+          onHover: (element) => {
+            this.showElementPreview(element);
+          },
+          onClick: (element) => {
+            this.selectElement(element);
+            this.stop();
+          }
+        });
         document.body.style.cursor = "crosshair";
       }
       stop() {
@@ -1450,213 +3515,40 @@ ${examples}` : ""}`;
           return;
         console.log("Stopping element picker...");
         this.isActive = false;
-        this.removeUI();
-        this.detachEvents();
+        if (this.picker) {
+          this.picker.stop();
+          this.picker = null;
+        }
         document.body.style.cursor = "";
-        this.currentElement = null;
       }
-      // Scan for shadow roots in the document
-      scanForShadowRoots() {
-        const elements = document.querySelectorAll("*");
-        elements.forEach((el) => {
-          if (el.shadowRoot) {
-            this.shadowRoots.set(el, el.shadowRoot);
-          }
-        });
-      }
-      createUI() {
-        this.overlay = document.createElement("div");
-        this.overlay.style.cssText = `
-            position: fixed !important;
-            top: 0 !important;
-            left: 0 !important;
-            width: 100vw !important;
-            height: 100vh !important;
-            background: rgba(0, 0, 0, 0.01) !important;
-            z-index: 999999 !important;
-            cursor: crosshair !important;
-            pointer-events: all !important;
-        `;
-        this.highlightBox = document.createElement("div");
-        this.highlightBox.style.cssText = `
-            position: absolute !important;
-            border: 2px solid #ff6b35 !important;
-            background: rgba(255, 107, 53, 0.1) !important;
-            z-index: 1000000 !important;
-            pointer-events: none !important;
-            display: none !important;
-            box-shadow: 0 0 10px rgba(255, 107, 53, 0.5) !important;
-            transition: all 0.1s ease !important;
-        `;
-        if (this.options.showInfoBox) {
-          this.infoBox = document.createElement("div");
-          this.infoBox.style.cssText = `
-                position: fixed !important;
-                bottom: 20px !important;
-                right: 20px !important;
-                background: rgba(0, 0, 0, 0.9) !important;
-                color: white !important;
-                padding: 12px 16px !important;
-                border-radius: 8px !important;
-                font-size: 12px !important;
-                font-family: monospace !important;
-                z-index: 1000001 !important;
-                pointer-events: none !important;
-                display: none !important;
-                max-width: 400px !important;
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
-            `;
-        }
-        document.body.appendChild(this.overlay);
-        document.body.appendChild(this.highlightBox);
-        if (this.infoBox)
-          document.body.appendChild(this.infoBox);
-      }
-      removeUI() {
-        if (this.overlay)
-          this.overlay.remove();
-        if (this.highlightBox)
-          this.highlightBox.remove();
-        if (this.infoBox)
-          this.infoBox.remove();
-        this.overlay = null;
-        this.highlightBox = null;
-        this.infoBox = null;
-      }
-      attachEvents() {
-        document.addEventListener("mousemove", this.onMouseMove, true);
-        document.addEventListener("click", this.onClick, true);
-        if (this.options.enableRightClick) {
-          document.addEventListener("contextmenu", this.onContextMenu, true);
-        }
-        if (this.options.enableKeyboardNav) {
-          document.addEventListener("keydown", this.onKeyDown, true);
-        }
-      }
-      detachEvents() {
-        document.removeEventListener("mousemove", this.onMouseMove, true);
-        document.removeEventListener("click", this.onClick, true);
-        if (this.options.enableRightClick) {
-          document.removeEventListener("contextmenu", this.onContextMenu, true);
-        }
-        if (this.options.enableKeyboardNav) {
-          document.removeEventListener("keydown", this.onKeyDown, true);
-        }
-      }
-      onMouseMove = throttle_default((e) => {
-        if (!this.isActive)
-          return;
-        const element = this.getElementAtPoint(e.clientX, e.clientY);
-        if (element && element !== this.highlightBox && element !== this.infoBox) {
-          this.currentElement = element;
-          this.highlightElement(element);
-          if (this.options.showInfoBox) {
-            this.showElementInfo(element);
-          }
-        }
-      }, 16);
-      // ~60fps
-      onClick(e) {
-        if (!this.isActive)
-          return;
-        e.preventDefault();
-        e.stopPropagation();
-        if (this.currentElement) {
-          this.selectElement(this.currentElement);
-        }
-      }
-      onContextMenu(e) {
-        if (!this.isActive)
-          return;
-        e.preventDefault();
-        e.stopPropagation();
-        if (this.currentElement && this.currentElement.parentElement) {
-          this.currentElement = this.currentElement.parentElement;
-          this.highlightElement(this.currentElement);
-          this.showElementInfo(this.currentElement);
-        }
-      }
-      onKeyDown(e) {
-        if (e.key === "Escape") {
-          this.stop();
-        } else if (this.options.enableKeyboardNav && e.key === "Enter" && this.currentElement) {
-          e.preventDefault();
-          this.selectElement(this.currentElement);
-        }
-      }
-      // Get element at point including shadow DOM
-      getElementAtPoint(x, y) {
-        this.overlay.style.display = "none";
-        let element = document.elementFromPoint(x, y);
-        if (element) {
-          const shadowRoot = this.shadowRoots.get(element);
-          if (shadowRoot) {
-            const shadowElement = shadowRoot.elementFromPoint(x, y);
-            if (shadowElement)
-              element = shadowElement;
-          }
-        }
-        this.overlay.style.display = "block";
-        return element;
-      }
-      highlightElement(element) {
-        const elementOffset = offset(element);
-        const elementHeight = height(element);
-        const elementWidth = getWidth(element);
-        this.highlightBox.style.cssText = `
-            position: absolute !important;
-            left: ${elementOffset.left}px !important;
-            top: ${elementOffset.top}px !important;
-            width: ${elementWidth}px !important;
-            height: ${elementHeight}px !important;
-            border: 2px solid #ff6b35 !important;
-            background: rgba(255, 107, 53, 0.1) !important;
-            z-index: 1000000 !important;
-            pointer-events: none !important;
-            display: block !important;
-            box-shadow: 0 0 10px rgba(255, 107, 53, 0.5) !important;
-        `;
-      }
-      showElementInfo(element) {
+      showElementPreview(element) {
         var _a;
         const selector = this.getOptimalSelector(element);
         const tagName = element.tagName.toLowerCase();
         const text2 = ((_a = element.textContent) == null ? void 0 : _a.trim().slice(0, 30)) || "";
-        this.infoBox.innerHTML = `
-            <div style="color: #ff6b35; font-weight: bold; margin-bottom: 4px;">Element Info</div>
-            <div>Tag: &lt;${tagName}&gt;</div>
-            <div>Selector: ${selector}</div>
-            ${text2 ? `<div>Text: "${text2}..."</div>` : ""}
-            <div style="margin-top: 8px; color: #888;">Click to select | Right-click for parent | ESC to cancel</div>
-        `;
-        this.infoBox.style.display = "block";
+        console.log(`Hovering: <${tagName}> ${selector} ${text2 ? `"${text2}..."` : ""}`);
       }
       selectElement(element) {
         console.log("Element selected:", element);
         const data = this.extractElementData(element);
-        this.stop();
         chrome.runtime.sendMessage({
           action: "elementSelected",
           data
         });
       }
+      // Extract comprehensive element data
       extractElementData(element) {
         var _a;
         const style = getComputedStyle(element);
         const rect = element.getBoundingClientRect();
-        const selectors = this.generateSelectors(element);
-        const eventListeners = this.detectEventListeners(element);
-        const contentFingerprint = this.createContentFingerprint(element);
-        const accessibilityInfo = this.getAccessibilityInfo(element);
-        const data = {
+        const selector = this.getOptimalSelector(element);
+        return {
           // Basic info
           tagName: element.tagName.toLowerCase(),
           id: element.id || null,
           className: element.className || null,
-          selector: selectors.primary,
-          fallbackSelectors: selectors.fallbacks,
-          xpath: this.getXPath(element),
-          cssPath: this.getCSSPath(element),
+          selector,
+          fallbackSelectors: this.generateFallbackSelectors(element),
           text: ((_a = element.textContent) == null ? void 0 : _a.trim().slice(0, 200)) || null,
           html: element.outerHTML.length > 1e3 ? element.outerHTML.slice(0, 1e3) + "..." : element.outerHTML,
           // Position and dimensions
@@ -1670,13 +3562,9 @@ ${examples}` : ""}`;
               right: rect.right,
               bottom: rect.bottom,
               left: rect.left
-            },
-            document: {
-              x: rect.left + window.scrollX,
-              y: rect.top + window.scrollY
             }
           },
-          // Extended styles
+          // Key styles
           styles: {
             display: style.display,
             position: style.position,
@@ -1685,263 +3573,86 @@ ${examples}` : ""}`;
             backgroundColor: style.backgroundColor,
             color: style.color,
             fontSize: style.fontSize,
-            fontFamily: style.fontFamily,
             opacity: style.opacity,
             visibility: style.visibility,
-            zIndex: style.zIndex,
-            cursor: style.cursor,
-            overflow: style.overflow,
-            border: style.border,
-            padding: style.padding,
-            margin: style.margin,
-            transform: style.transform,
-            transition: style.transition,
-            boxShadow: style.boxShadow,
-            borderRadius: style.borderRadius,
-            pointerEvents: style.pointerEvents
+            cursor: style.cursor
           },
           // Interaction properties
-          isVisible: this.isElementVisible(element),
+          isVisible: isVisible(element),
           isClickable: this.isElementClickable(element),
           isInteractive: this.isElementInteractive(element),
-          isInViewport: this.isInViewport(element),
-          isFocusable: this.isFocusable(element),
-          // Event listeners
-          eventListeners,
-          hasClickHandler: eventListeners.includes("click"),
           // All attributes
           attributes: this.getAttributes(element),
-          dataAttributes: this.getDataAttributes(element),
           // Form properties
           formProperties: this.getFormProperties(element),
-          // Context
-          parentContext: this.getParentContext(element),
-          siblingContext: this.getSiblingContext(element),
-          // Accessibility
-          accessibility: accessibilityInfo,
-          // Content fingerprint for tracking
-          contentFingerprint,
-          // Shadow DOM info
-          isInShadowDOM: this.isInShadowDOM(element),
-          shadowRoot: element.shadowRoot ? true : false,
-          // Frame info
-          frameInfo: this.getFrameInfo(element),
           // Advanced manipulation examples
-          manipulationExamples: this.generateAdvancedManipulationExamples(element, selectors.primary),
-          // Tracking preferences (disabled by default for backward compatibility)
+          manipulationExamples: this.generateManipulationExamples(element, selector),
+          // Tracking preferences
           trackChanges: false
         };
-        return data;
       }
-      // Generate multiple selector strategies using css-selector-generator
-      generateSelectors(element) {
-        const selectors = {
-          primary: null,
-          fallbacks: []
-        };
+      // Get optimal selector using css-selector-generator
+      getOptimalSelector(element) {
         try {
-          const generatedSelector = getCssSelector(element, {
+          return getCssSelector(element, {
             selectors: ["id", "class", "tag", "attribute", "nthchild"],
             blacklist: [/^[a-f0-9]{6,}$/i, /temp|tmp|generated|random/i, /^auto_/],
-            whitelist: [],
             root: document.body,
             combineWithinSelector: true,
             includeTag: true
           });
-          if (generatedSelector && document.querySelectorAll(generatedSelector).length === 1) {
-            selectors.primary = generatedSelector;
-          } else {
-            selectors.primary = this.getCustomSelector(element);
-          }
-          selectors.fallbacks = this.generateFallbackSelectors(element);
         } catch (error) {
           console.warn("css-selector-generator failed:", error);
-          selectors.primary = this.getCustomSelector(element);
-          selectors.fallbacks = this.generateFallbackSelectors(element);
+          return this.getSimpleSelector(element);
         }
-        return selectors;
       }
-      // Custom selector generation (fallback for css-selector-generator)
-      getCustomSelector(element) {
-        if (element.id && !this.isDynamicId(element.id)) {
+      // Simple fallback selector
+      getSimpleSelector(element) {
+        if (element.id)
           return `#${CSS.escape(element.id)}`;
+        if (element.className) {
+          const classes = element.className.toString().trim().split(/\s+/);
+          if (classes.length > 0) {
+            return `.${CSS.escape(classes[0])}`;
+          }
         }
-        const attrSelector = this.getSimpleAttributeSelector(element);
-        if (attrSelector)
-          return attrSelector;
-        const classSelector = this.getUniqueClassSelector(element);
-        if (classSelector)
-          return classSelector;
-        const contentSelector = this.getContentSelector(element);
-        if (contentSelector)
-          return contentSelector;
-        return this.getSimplePositionSelector(element);
+        return element.tagName.toLowerCase();
       }
-      // Generate fallback selectors for reliability
+      // Generate fallback selectors
       generateFallbackSelectors(element) {
         const fallbacks = [];
-        const xpath = this.getXPath(element);
-        if (xpath)
-          fallbacks.push(xpath);
-        const cssPath = this.getCSSPath(element);
-        if (cssPath)
-          fallbacks.push(cssPath);
-        const contentSelector = this.getContentSelector(element);
-        if (contentSelector)
-          fallbacks.push(contentSelector);
-        const positionSelector = this.getSimplePositionSelector(element);
-        if (positionSelector)
-          fallbacks.push(positionSelector);
+        if (element.id)
+          fallbacks.push(`#${CSS.escape(element.id)}`);
+        if (element.className) {
+          const classes = element.className.toString().trim().split(/\s+/);
+          fallbacks.push(...classes.map((cls) => `.${CSS.escape(cls)}`));
+        }
+        ["name", "type", "placeholder", "aria-label"].forEach((attr) => {
+          const value = element.getAttribute(attr);
+          if (value) {
+            fallbacks.push(`[${attr}="${CSS.escape(value)}"]`);
+          }
+        });
         return [...new Set(fallbacks)];
       }
-      // Get simple attribute-based selector
-      getSimpleAttributeSelector(element) {
-        const attrs = ["name", "type", "placeholder", "value", "title", "alt", "aria-label", "role"];
-        const tag = element.tagName.toLowerCase();
-        for (const attr of attrs) {
-          const value = element.getAttribute(attr);
-          if (value && value.length < 50 && value.length > 0) {
-            const selector = `${tag}[${attr}="${CSS.escape(value)}"]`;
-            if (document.querySelectorAll(selector).length === 1) {
-              return selector;
-            }
-            if (["button", "input"].includes(tag) && ["type", "value", "aria-label"].includes(attr)) {
-              const simpleSelector = `[${attr}="${CSS.escape(value)}"]`;
-              if (document.querySelectorAll(simpleSelector).length === 1) {
-                return simpleSelector;
-              }
-            }
-          }
-        }
-        if (tag === "input" && element.type === "submit") {
-          if (document.querySelectorAll('input[type="submit"]').length === 1) {
-            return 'input[type="submit"]';
-          }
-        }
-        return null;
-      }
-      // Get unique class selector (single class only)
-      getUniqueClassSelector(element) {
-        if (!element.className)
-          return null;
-        const classes = (element.className || "").toString().trim().split(/\s+/).filter((c) => c && !this.isUtilityClass(c));
-        const tag = element.tagName.toLowerCase();
-        for (const cls of classes) {
-          const selector = `.${CSS.escape(cls)}`;
-          if (document.querySelectorAll(selector).length === 1) {
-            return selector;
-          }
-          const tagClassSelector = `${tag}.${CSS.escape(cls)}`;
-          if (document.querySelectorAll(tagClassSelector).length === 1) {
-            return tagClassSelector;
-          }
-        }
-        return null;
-      }
-      // Simpler position selector (max 2 levels)
-      getSimplePositionSelector(element) {
-        const tag = element.tagName.toLowerCase();
-        const allOfType = document.querySelectorAll(tag);
-        if (allOfType.length === 1) {
-          return tag;
-        }
-        if (allOfType.length <= 3) {
-          const index = Array.from(allOfType).indexOf(element) + 1;
-          return `${tag}:nth-of-type(${index})`;
-        }
-        let parent = element.parentElement;
-        if (parent && parent.id && !this.isDynamicId(parent.id)) {
-          const selector = `#${CSS.escape(parent.id)} > ${tag}`;
-          if (document.querySelectorAll(selector).length === 1) {
-            return selector;
-          }
-          const siblings2 = Array.from(parent.children).filter((el) => el.tagName === element.tagName);
-          if (siblings2.length <= 3) {
-            const index = siblings2.indexOf(element) + 1;
-            return `#${CSS.escape(parent.id)} > ${tag}:nth-of-type(${index})`;
-          }
-        }
-        if (parent && parent.className) {
-          const parentClasses = (parent.className || "").toString().trim().split(/\s+/).filter((c) => c && !this.isUtilityClass(c));
-          for (const cls of parentClasses) {
-            const selector = `.${CSS.escape(cls)} > ${tag}`;
-            if (document.querySelectorAll(selector).length === 1) {
-              return selector;
-            }
-            const siblings2 = Array.from(parent.children).filter((el) => el.tagName === element.tagName);
-            if (siblings2.length <= 3) {
-              const index = siblings2.indexOf(element) + 1;
-              const selectorWithIndex = `.${CSS.escape(cls)} > ${tag}:nth-of-type(${index})`;
-              if (document.querySelectorAll(selectorWithIndex).length === 1) {
-                return selectorWithIndex;
-              }
-            }
-          }
-        }
-        if (parent) {
-          const siblings2 = Array.from(parent.children).filter((el) => el.tagName === element.tagName);
-          if (siblings2.length <= 5) {
-            const index = siblings2.indexOf(element) + 1;
-            return `${tag}:nth-of-type(${index})`;
-          }
-        }
-        return tag;
-      }
-      // Additional core methods
-      // Get XPath for an element
-      getXPath(element) {
-        const path = [];
-        let current = element;
-        while (current && current.nodeType === Node.ELEMENT_NODE) {
-          let index = 1;
-          let sibling = current.previousSibling;
-          while (sibling) {
-            if (sibling.nodeType === Node.ELEMENT_NODE && sibling.tagName === current.tagName) {
-              index++;
-            }
-            sibling = sibling.previousSibling;
-          }
-          const tagName = current.tagName.toLowerCase();
-          const step = `${tagName}[${index}]`;
-          path.unshift(step);
-          current = current.parentElement;
-        }
-        return `//${path.join("/")}`;
-      }
-      // Get optimal selector using css-selector-generator
-      getOptimalSelector(element) {
-        return this.generateSelectors(element).primary;
-      }
-      // Element visibility check using dom-helpers
-      isElementVisible(element) {
-        return isVisible(element);
-      }
+      // Check if element is clickable
       isElementClickable(element) {
         const clickableTags = ["a", "button", "input", "select", "textarea", "label"];
         const clickableRoles = ["button", "link", "checkbox", "radio", "menuitem", "tab"];
-        const tagName = element.tagName.toLowerCase();
-        return !!(clickableTags.includes(tagName) || element.onclick || element.getAttribute("onclick") || clickableRoles.includes(element.getAttribute("role")) || getComputedStyle(element).cursor === "pointer" || element.hasAttribute("data-clickable") || element.classList.contains("clickable") || element.classList.contains("btn"));
+        return clickableTags.includes(element.tagName.toLowerCase()) || element.onclick || element.getAttribute("onclick") || clickableRoles.includes(element.getAttribute("role")) || getComputedStyle(element).cursor === "pointer";
       }
+      // Check if element is interactive
       isElementInteractive(element) {
-        return !!(element.isContentEditable || element.getAttribute("contenteditable") === "true" || ["input", "textarea", "select"].includes(element.tagName.toLowerCase()) || element.tabIndex >= 0 || element.hasAttribute("draggable") || element.hasAttribute("droppable"));
+        return element.isContentEditable || element.getAttribute("contenteditable") === "true" || ["input", "textarea", "select"].includes(element.tagName.toLowerCase()) || element.tabIndex >= 0;
       }
-      isInViewport(element) {
-        const rect = element.getBoundingClientRect();
-        return rect.top >= 0 && rect.left >= 0 && rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) && rect.right <= (window.innerWidth || document.documentElement.clientWidth);
-      }
-      // Element attribute helpers (simplified)
+      // Get all attributes
       getAttributes(element) {
         return Array.from(element.attributes).reduce((acc, attr) => {
           acc[attr.name] = attr.value;
           return acc;
         }, {});
       }
-      getDataAttributes(element) {
-        return Array.from(element.attributes).filter((attr) => attr.name.startsWith("data-")).reduce((acc, attr) => {
-          acc[attr.name] = attr.value;
-          return acc;
-        }, {});
-      }
+      // Get form properties
       getFormProperties(element) {
         const tagName = element.tagName.toLowerCase();
         if (["input", "textarea", "select"].includes(tagName)) {
@@ -1953,121 +3664,13 @@ ${examples}` : ""}`;
             required: element.required || false,
             disabled: element.disabled || false,
             readonly: element.readOnly || false,
-            checked: element.checked || false,
-            maxLength: element.maxLength || null,
-            min: element.min || null,
-            max: element.max || null,
-            pattern: element.pattern || null,
-            autocomplete: element.autocomplete || null,
-            form: element.form ? element.form.id || element.form.name : null
+            checked: element.checked || false
           };
         }
         return null;
       }
-      getParentContext(element) {
-        const parent = element.parentElement;
-        if (!parent || parent === document.body)
-          return null;
-        return {
-          tagName: parent.tagName.toLowerCase(),
-          id: parent.id || null,
-          className: parent.className || null,
-          selector: this.getOptimalSelector(parent)
-        };
-      }
-      // Simplified event listener detection
-      detectEventListeners(element) {
-        const listeners = /* @__PURE__ */ new Set();
-        const eventAttrs = ["onclick", "onmouseover", "onmouseout", "onchange", "onsubmit", "onfocus", "onblur"];
-        eventAttrs.forEach((attr) => {
-          if (element.hasAttribute(attr)) {
-            listeners.add(attr.substring(2));
-          }
-        });
-        const tagName = element.tagName.toLowerCase();
-        const style = getComputedStyle(element);
-        if (style.cursor === "pointer")
-          listeners.add("click");
-        if (["a", "button"].includes(tagName))
-          listeners.add("click");
-        if (element.type === "submit")
-          listeners.add("submit");
-        if (["input", "textarea", "select"].includes(tagName)) {
-          listeners.add("change");
-          listeners.add("input");
-        }
-        return Array.from(listeners);
-      }
-      createContentFingerprint(element) {
-        var _a;
-        const text2 = ((_a = element.textContent) == null ? void 0 : _a.trim()) || "";
-        const attributes = Array.from(element.attributes).map((a) => `${a.name}=${a.value}`).sort().join("|");
-        return {
-          tagName: element.tagName.toLowerCase(),
-          textSnippet: text2.slice(0, 50),
-          attributeSignature: attributes.slice(0, 100),
-          classCount: element.classList.length,
-          childCount: element.children.length
-        };
-      }
-      getAccessibilityInfo(element) {
-        return {
-          role: element.getAttribute("role"),
-          ariaLabel: element.getAttribute("aria-label"),
-          ariaDescribedBy: element.getAttribute("aria-describedby"),
-          ariaExpanded: element.getAttribute("aria-expanded"),
-          ariaHidden: element.getAttribute("aria-hidden"),
-          tabIndex: element.tabIndex,
-          alt: element.getAttribute("alt"),
-          title: element.getAttribute("title")
-        };
-      }
-      isInShadowDOM(element) {
-        let current = element;
-        while (current) {
-          if (current.getRootNode() !== document) {
-            return true;
-          }
-          current = current.parentElement;
-        }
-        return false;
-      }
-      getFrameInfo(element) {
-        return {
-          isInFrame: window !== window.top,
-          frameDepth: this.getFrameDepth(),
-          frameOrigin: window.location.origin
-        };
-      }
-      getFrameDepth() {
-        let depth = 0;
-        let current = window;
-        try {
-          while (current !== current.parent) {
-            depth++;
-            current = current.parent;
-          }
-        } catch (e) {
-        }
-        return depth;
-      }
-      getSiblingContext(element) {
-        var _a, _b;
-        const parent = element.parentElement;
-        if (!parent)
-          return null;
-        const siblings2 = Array.from(parent.children);
-        const index = siblings2.indexOf(element);
-        return {
-          totalSiblings: siblings2.length,
-          index,
-          isFirst: index === 0,
-          isLast: index === siblings2.length - 1,
-          previousSibling: ((_a = siblings2[index - 1]) == null ? void 0 : _a.tagName.toLowerCase()) || null,
-          nextSibling: ((_b = siblings2[index + 1]) == null ? void 0 : _b.tagName.toLowerCase()) || null
-        };
-      }
-      generateAdvancedManipulationExamples(element, selector) {
+      // Generate manipulation examples
+      generateManipulationExamples(element, selector) {
         const examples = {};
         const tagName = element.tagName.toLowerCase();
         examples["Click"] = `document.querySelector('${selector}').click()`;
@@ -2085,16 +3688,22 @@ ${examples}` : ""}`;
         }
         examples["Hide"] = `document.querySelector('${selector}').style.display = 'none'`;
         examples["Show"] = `document.querySelector('${selector}').style.display = 'block'`;
-        examples["Change Text"] = `document.querySelector('${selector}').textContent = 'New text'`;
-        examples["Trigger Change"] = `document.querySelector('${selector}').dispatchEvent(new Event('change'))`;
         return examples;
       }
-    };
-    window.ElementPicker = ElementPicker;
+    }
+    window.ElementPicker = ElementPicker2;
     window.ElementManager = ElementManager;
   })();
 })();
 /*! Bundled license information:
+
+localforage/dist/localforage.js:
+  (*!
+      localForage -- Offline Storage, Improved
+      Version 1.10.0
+      https://localforage.github.io/localForage
+      (c) 2013-2017 Mozilla, Apache License 2.0
+  *)
 
 lodash-es/lodash.js:
   (**

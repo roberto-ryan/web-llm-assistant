@@ -82,7 +82,7 @@ Promise.all([
   build({
     ...commonOptions,
     format: 'iife',
-    entryPoints: ['src/elementPicker.js'],
+    entryPoints: ['src/elementPicker-refactored.js'],
     outfile: 'dist/elementPicker.js',
   }),
   
