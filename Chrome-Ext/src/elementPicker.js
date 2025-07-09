@@ -1,3 +1,7 @@
+import { getCssSelector } from 'css-selector-generator';
+import { isVisible, offset, height, width } from 'dom-helpers';
+import { debounce, throttle } from 'lodash-es';
+
 (() => {
   // src/elementPicker.js
   var ElementManager = class {
@@ -23,8 +27,8 @@
         console.error("Error loading stored elements:", error);
       }
     }
-    // Save elements to Chrome storage
-    async saveElements() {
+    // Save elements to Chrome storage with debouncing
+    saveElements = debounce(async () => {
       try {
         const dataToStore = {
           elements: Array.from(this.elementStore.entries()),
@@ -38,7 +42,7 @@
       } catch (error) {
         console.error("Error saving elements:", error);
       }
-    }
+    }, 300);
     // Clear all stored elements
     async clearStoredElements() {
       try {
@@ -184,7 +188,7 @@
         id,
         displayName: data.customName || id,
         data,
-        name: data.id ? `#${data.id}` : data.className ? `.${data.className.split(" ")[0]}` : `<${data.tagName}>`
+        name: data.id ? `#${data.id}` : data.className ? `.${data.className.toString().split(" ")[0]}` : `<${data.tagName}>`
       }));
     }
     // Verify element still exists and update selector if needed
@@ -260,10 +264,7 @@ ${this.formatElementInfo(data)}
       return processedMessage;
     }
     formatElementInfo(data) {
-      const escapeHtml = (unsafe) => {
-        return unsafe.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
-      };
-      const styles = Object.entries(data.styles || {}).filter(([key, value]) => value && value !== "none" && value !== "auto" && value !== "").map(([key, value]) => `  ${key}: ${value}`).join("\n");
+      const styles = Object.entries(data.styles || {}).filter(([, value]) => value && value !== "none" && value !== "auto" && value !== "").map(([key, value]) => `  ${key}: ${value}`).join("\n");
       const attributes = Object.entries(data.attributes || {}).map(([key, value]) => `  ${key}: ${value}`).join("\n");
       const examples = data.manipulationExamples ? Object.entries(data.manipulationExamples).map(([action, code]) => `${action}:
 ${code}`).join("\n\n") : "";
@@ -300,7 +301,7 @@ ${examples ? `Console Manipulation Examples:
 ${examples}` : ""}`;
     }
     formatElementSummary(data, elementId) {
-      const elementName = data.id ? `#${data.id}` : data.className ? `.${data.className.split(" ")[0]}` : `<${data.tagName}>`;
+      const elementName = data.id ? `#${data.id}` : data.className ? `.${data.className.toString().split(" ")[0]}` : `<${data.tagName}>`;
       const text = data.text ? ` - "${data.text.slice(0, 50)}${data.text.length > 50 ? "..." : ""}"` : "";
       const displayName = data.customName || elementId;
       const validity = data.isValid !== void 0 ? data.isValid ? "\u2713" : "\u2717" : "";
@@ -433,7 +434,7 @@ ${examples}` : ""}`;
           break;
         }
         if (current.className) {
-          const classes = current.className.trim().split(/\s+/);
+          const classes = (current.className || '').toString().trim().split(/\s+/);
           if (classes.length > 0) {
             selector += "." + classes.map((c) => CSS.escape(c)).join(".");
           }
@@ -564,7 +565,7 @@ ${examples}` : ""}`;
         document.removeEventListener("keydown", this.onKeyDown, true);
       }
     }
-    onMouseMove(e) {
+    onMouseMove = throttle((e) => {
       if (!this.isActive)
         return;
       const element = this.getElementAtPoint(e.clientX, e.clientY);
@@ -575,7 +576,7 @@ ${examples}` : ""}`;
           this.showElementInfo(element);
         }
       }
-    }
+    }, 16); // ~60fps
     onClick(e) {
       if (!this.isActive)
         return;
@@ -620,15 +621,16 @@ ${examples}` : ""}`;
       return element;
     }
     highlightElement(element) {
-      const rect = element.getBoundingClientRect();
-      const scrollX = window.pageXOffset || document.documentElement.scrollLeft;
-      const scrollY = window.pageYOffset || document.documentElement.scrollTop;
+      const elementOffset = offset(element);
+      const elementHeight = height(element);
+      const elementWidth = width(element);
+      
       this.highlightBox.style.cssText = `
             position: absolute !important;
-            left: ${rect.left + scrollX}px !important;
-            top: ${rect.top + scrollY}px !important;
-            width: ${rect.width}px !important;
-            height: ${rect.height}px !important;
+            left: ${elementOffset.left}px !important;
+            top: ${elementOffset.top}px !important;
+            width: ${elementWidth}px !important;
+            height: ${elementHeight}px !important;
             border: 2px solid #ff6b35 !important;
             background: rgba(255, 107, 53, 0.1) !important;
             z-index: 1000000 !important;
@@ -753,35 +755,91 @@ ${examples}` : ""}`;
       };
       return data;
     }
-    // Generate multiple selector strategies
+    // Generate multiple selector strategies using css-selector-generator
     generateSelectors(element) {
       const selectors = {
         primary: null,
         fallbacks: []
       };
-      if (element.id && !this.isDynamicId(element.id)) {
-        selectors.primary = `#${CSS.escape(element.id)}`;
-        return selectors;
+      
+      try {
+        // Use css-selector-generator as primary method
+        const generatedSelector = getCssSelector(element, {
+          selectors: ['id', 'class', 'tag', 'attribute', 'nthchild'],
+          blacklist: [/^[a-f0-9]{6,}$/i, /temp|tmp|generated|random/i, /^auto_/],
+          whitelist: [],
+          root: document.body,
+          combineWithinSelector: true,
+          includeTag: true
+        });
+        
+        // Validate the generated selector
+        if (generatedSelector && document.querySelectorAll(generatedSelector).length === 1) {
+          selectors.primary = generatedSelector;
+        } else {
+          // Fallback to our custom logic if generated selector isn't unique
+          selectors.primary = this.getCustomSelector(element);
+        }
+        
+        // Generate fallback selectors
+        selectors.fallbacks = this.generateFallbackSelectors(element);
+        
+      } catch (error) {
+        console.warn('css-selector-generator failed:', error);
+        // Fallback to custom selector logic
+        selectors.primary = this.getCustomSelector(element);
+        selectors.fallbacks = this.generateFallbackSelectors(element);
       }
-      const simpleSelector = this.getSimpleAttributeSelector(element);
-      if (simpleSelector) {
-        selectors.primary = simpleSelector;
-        return selectors;
-      }
-      const classSelector = this.getUniqueClassSelector(element);
-      if (classSelector) {
-        selectors.primary = classSelector;
-        return selectors;
-      }
-      const contentSelector = this.getContentSelector(element);
-      if (contentSelector) {
-        selectors.primary = contentSelector;
-        return selectors;
-      }
-      selectors.primary = this.getSimplePositionSelector(element);
+      
       return selectors;
     }
-    // New: Get simple attribute-based selector
+    // Custom selector generation (fallback for css-selector-generator)
+    getCustomSelector(element) {
+      // Try ID first (if not dynamic)
+      if (element.id && !this.isDynamicId(element.id)) {
+        return `#${CSS.escape(element.id)}`;
+      }
+      
+      // Try simple attribute-based selector
+      const attrSelector = this.getSimpleAttributeSelector(element);
+      if (attrSelector) return attrSelector;
+      
+      // Try unique class selector
+      const classSelector = this.getUniqueClassSelector(element);
+      if (classSelector) return classSelector;
+      
+      // Try content-based selector
+      const contentSelector = this.getContentSelector(element);
+      if (contentSelector) return contentSelector;
+      
+      // Fallback to position-based selector
+      return this.getSimplePositionSelector(element);
+    }
+    
+    // Generate fallback selectors for reliability
+    generateFallbackSelectors(element) {
+      const fallbacks = [];
+      
+      // Add XPath as fallback
+      const xpath = this.getXPath(element);
+      if (xpath) fallbacks.push(xpath);
+      
+      // Add CSS path as fallback
+      const cssPath = this.getCSSPath(element);
+      if (cssPath) fallbacks.push(cssPath);
+      
+      // Add content-based selector if available
+      const contentSelector = this.getContentSelector(element);
+      if (contentSelector) fallbacks.push(contentSelector);
+      
+      // Add position-based selector
+      const positionSelector = this.getSimplePositionSelector(element);
+      if (positionSelector) fallbacks.push(positionSelector);
+      
+      return [...new Set(fallbacks)]; // Remove duplicates
+    }
+    
+    // Get simple attribute-based selector
     getSimpleAttributeSelector(element) {
       const attrs = ["name", "type", "placeholder", "value", "title", "alt", "aria-label", "role"];
       const tag = element.tagName.toLowerCase();
@@ -807,11 +865,11 @@ ${examples}` : ""}`;
       }
       return null;
     }
-    // New: Get unique class selector (single class only)
+    // Get unique class selector (single class only)
     getUniqueClassSelector(element) {
-      if (!element.className || typeof element.className !== "string")
+      if (!element.className)
         return null;
-      const classes = element.className.trim().split(/\s+/).filter((c) => c && !this.isUtilityClass(c));
+      const classes = (element.className || '').toString().trim().split(/\s+/).filter((c) => c && !this.isUtilityClass(c));
       const tag = element.tagName.toLowerCase();
       for (const cls of classes) {
         const selector = `.${CSS.escape(cls)}`;
@@ -825,7 +883,7 @@ ${examples}` : ""}`;
       }
       return null;
     }
-    // Modified: Simpler position selector (max 2 levels)
+    // Simpler position selector (max 2 levels)
     getSimplePositionSelector(element) {
       const tag = element.tagName.toLowerCase();
       const allOfType = document.querySelectorAll(tag);
@@ -849,7 +907,7 @@ ${examples}` : ""}`;
         }
       }
       if (parent && parent.className) {
-        const parentClasses = parent.className.trim().split(/\s+/).filter((c) => c && !this.isUtilityClass(c));
+        const parentClasses = (parent.className || '').toString().trim().split(/\s+/).filter((c) => c && !this.isUtilityClass(c));
         for (const cls of parentClasses) {
           const selector = `.${CSS.escape(cls)} > ${tag}`;
           if (document.querySelectorAll(selector).length === 1) {
@@ -895,15 +953,13 @@ ${examples}` : ""}`;
       }
       return `//${path.join("/")}`;
     }
-    // Get optimal selector using the new strategy
+    // Get optimal selector using css-selector-generator
     getOptimalSelector(element) {
       return this.generateSelectors(element).primary;
     }
-    // Element visibility and interaction checks
+    // Element visibility check using dom-helpers
     isElementVisible(element) {
-      const style = getComputedStyle(element);
-      const rect = element.getBoundingClientRect();
-      return !!(rect.width > 0 && rect.height > 0 && style.opacity !== "0" && style.visibility !== "hidden" && style.display !== "none" && element.offsetParent !== null);
+      return isVisible(element);
     }
     isElementClickable(element) {
       const clickableTags = ["a", "button", "input", "select", "textarea", "label"];
@@ -918,22 +974,20 @@ ${examples}` : ""}`;
       const rect = element.getBoundingClientRect();
       return rect.top >= 0 && rect.left >= 0 && rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) && rect.right <= (window.innerWidth || document.documentElement.clientWidth);
     }
-    // Element attribute helpers
+    // Element attribute helpers (simplified)
     getAttributes(element) {
-      const attrs = {};
-      for (const attr of element.attributes) {
-        attrs[attr.name] = attr.value;
-      }
-      return attrs;
+      return Array.from(element.attributes).reduce((acc, attr) => {
+        acc[attr.name] = attr.value;
+        return acc;
+      }, {});
     }
     getDataAttributes(element) {
-      const dataAttrs = {};
-      for (const attr of element.attributes) {
-        if (attr.name.startsWith("data-")) {
-          dataAttrs[attr.name] = attr.value;
-        }
-      }
-      return dataAttrs;
+      return Array.from(element.attributes)
+        .filter(attr => attr.name.startsWith('data-'))
+        .reduce((acc, attr) => {
+          acc[attr.name] = attr.value;
+          return acc;
+        }, {});
     }
     getFormProperties(element) {
       const tagName = element.tagName.toLowerCase();
@@ -968,32 +1022,37 @@ ${examples}` : ""}`;
         selector: this.getOptimalSelector(parent)
       };
     }
-    // Additional helper methods for element analysis
+    // Simplified event listener detection
     detectEventListeners(element) {
-      const listeners = [];
-      const eventAttrs = ["onclick", "onmouseover", "onmouseout", "onchange", "onsubmit", "onfocus", "onblur"];
-      eventAttrs.forEach((attr) => {
+      const listeners = new Set();
+      const eventAttrs = ['onclick', 'onmouseover', 'onmouseout', 'onchange', 'onsubmit', 'onfocus', 'onblur'];
+      
+      eventAttrs.forEach(attr => {
         if (element.hasAttribute(attr)) {
-          listeners.push(attr.substring(2));
+          listeners.add(attr.substring(2));
         }
       });
-      if (element.style.cursor === "pointer")
-        listeners.push("click");
-      if (element.tagName.toLowerCase() === "a")
-        listeners.push("click");
-      if (element.tagName.toLowerCase() === "button")
-        listeners.push("click");
-      if (element.type === "submit")
-        listeners.push("submit");
-      if (["input", "textarea", "select"].includes(element.tagName.toLowerCase())) {
-        listeners.push("change", "input");
+      
+      const tagName = element.tagName.toLowerCase();
+      const style = getComputedStyle(element);
+      
+      if (style.cursor === 'pointer') listeners.add('click');
+      if (['a', 'button'].includes(tagName)) listeners.add('click');
+      if (element.type === 'submit') listeners.add('submit');
+      if (['input', 'textarea', 'select'].includes(tagName)) {
+        listeners.add('change');
+        listeners.add('input');
       }
-      return [...new Set(listeners)];
+      
+      return Array.from(listeners);
     }
     createContentFingerprint(element) {
-      var _a;
-      const text = ((_a = element.textContent) == null ? void 0 : _a.trim()) || "";
-      const attributes = Array.from(element.attributes).map((a) => `${a.name}=${a.value}`).sort().join("|");
+      const text = element.textContent?.trim() || '';
+      const attributes = Array.from(element.attributes)
+        .map(a => `${a.name}=${a.value}`)
+        .sort()
+        .join('|');
+      
       return {
         tagName: element.tagName.toLowerCase(),
         textSnippet: text.slice(0, 50),
@@ -1044,19 +1103,19 @@ ${examples}` : ""}`;
       return depth;
     }
     getSiblingContext(element) {
-      var _a, _b;
       const parent = element.parentElement;
-      if (!parent)
-        return null;
+      if (!parent) return null;
+      
       const siblings = Array.from(parent.children);
       const index = siblings.indexOf(element);
+      
       return {
         totalSiblings: siblings.length,
         index,
         isFirst: index === 0,
         isLast: index === siblings.length - 1,
-        previousSibling: ((_a = siblings[index - 1]) == null ? void 0 : _a.tagName.toLowerCase()) || null,
-        nextSibling: ((_b = siblings[index + 1]) == null ? void 0 : _b.tagName.toLowerCase()) || null
+        previousSibling: siblings[index - 1]?.tagName.toLowerCase() || null,
+        nextSibling: siblings[index + 1]?.tagName.toLowerCase() || null
       };
     }
     generateAdvancedManipulationExamples(element, selector) {
