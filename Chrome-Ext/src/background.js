@@ -8,8 +8,10 @@
 // CSP violations and falls back to DevTools execution, which bypasses CSP entirely.
 //
 import { ServiceWorkerMLCEngineHandler } from "@mlc-ai/web-llm";
+import { SearchProvider } from "./search-provider.js";
 
 let webllmHandler = null;
+let searchProvider = null;
 
 chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
 
@@ -247,5 +249,22 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   } else if (request.action === 'elementSelected') {
     chrome.runtime.sendMessage(request);
     sendResponse({ success: true });
+  } else if (request.action === 'search') {
+    // Initialize search provider if needed
+    if (!searchProvider) {
+      searchProvider = new SearchProvider();
+    }
+    
+    // Perform search
+    searchProvider.search(request.query, request.limit)
+      .then(results => {
+        sendResponse({ success: true, results: results });
+      })
+      .catch(error => {
+        console.error('Search error:', error);
+        sendResponse({ success: false, error: error.message });
+      });
+    
+    return true; // Keep message channel open for async response
   }
 });

@@ -23066,6 +23066,66 @@ ${code}
     inputEl.value = "";
     return;
   }
+  if (query === "/help") {
+    addMessage(query, "user");
+    const helpMessage = `**Available Commands:**
+
+**/x <prompt>** - Generate and execute JavaScript code
+Example: /x click the submit button
+
+**/search <query>** - Search the web using DuckDuckGo
+Example: /search JavaScript async patterns
+
+**@element** - Reference stored elements in your prompts
+Example: Fill @loginForm with my email
+
+**rename @oldname newname** - Rename a stored element
+Example: rename @element1 submitButton
+
+**Element Picker** - Click the \u{1F4CC} button to select elements from the page
+
+Need more help? Just ask!`;
+    addMessage(helpMessage, "assistant");
+    inputEl.value = "";
+    return;
+  }
+  if (query.startsWith("/search ")) {
+    const searchQuery = query.replace("/search ", "").trim();
+    if (!searchQuery) {
+      addMessage(query, "user");
+      addMessage("Please provide a search query. Example: /search JavaScript async patterns", "error");
+      inputEl.value = "";
+      return;
+    }
+    addMessage(query, "user");
+    try {
+      const statusMessage = addMessage(`Searching for: "${searchQuery}"...`, "system");
+      const response = await chrome.runtime.sendMessage({
+        action: "search",
+        query: searchQuery,
+        limit: 5
+      });
+      statusMessage.remove();
+      if (response.success && response.results.length > 0) {
+        const formattedResults = response.results.map((result, index) => {
+          return `**${index + 1}. [${result.title}](${result.url})**
+${result.description}`;
+        }).join("\n\n");
+        addMessage(`Search results for "${searchQuery}":
+
+${formattedResults}`, "assistant");
+      } else if (response.success && response.results.length === 0) {
+        addMessage(`No results found for "${searchQuery}".`, "assistant");
+      } else {
+        addMessage(`Search failed: ${response.error || "Unknown error"}`, "error");
+      }
+    } catch (error) {
+      console.error("Search error:", error);
+      addMessage(`Search error: ${error.message}`, "error");
+    }
+    inputEl.value = "";
+    return;
+  }
   inputEl.value = "";
   sendBtn.disabled = true;
   const renameMatch = query.match(/^rename\s+@([a-zA-Z_][a-zA-Z0-9_]*)\s+([a-zA-Z_][a-zA-Z0-9_]*)$/i);
@@ -23141,6 +23201,11 @@ inputEl.addEventListener("keydown", (e) => {
   }
 });
 loadSettings();
+setTimeout(() => {
+  if (messagesDiv.children.length === 0) {
+    addMessage("Welcome! I'm your AI assistant. Type **/help** to see available commands or just start chatting.", "system");
+  }
+}, 500);
 window.addMessage = addMessage;
 window.handleNewChat = handleNewChat;
 window.messages = messages;
